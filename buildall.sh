@@ -18,7 +18,7 @@
 TOP="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 source "$TOP/lib/common.sh"
 
-check_platform
+logmust check_platform
 
 function usage() {
 	[[ $# != 0 ]] && echo "$(basename "$0"): $*" >&2
@@ -67,17 +67,17 @@ if [[ -n "$DEFAULT_GIT_BRANCH" ]]; then
 fi
 
 #
-# A list of target versions to build modules for can be passed KERNEL_VERSIONS.
-# Convert values like "default" or "aws" into actual kernel versions and
-# store them into EXPLICIT_KERNEL_VERSIONS.
+# A list of target versions to build modules for can be passed in
+# TARGET_PLATFORMS. Convert values like "default" or "aws" into actual kernel
+# versions and store them into KERNEL_VERSIONS.
 #
 if [[ "$BUILD_ALL" == "true" ]]; then
 	logmust determine_target_kernels
-	export EXPLICIT_KERNEL_VERSIONS
+	export KERNEL_VERSIONS
 fi
 
 if [[ -n "$SINGLE_PACKAGE_NAME" ]]; then
-	check_valid_package "$SINGLE_PACKAGE_NAME"
+	logmust check_valid_package "$SINGLE_PACKAGE_NAME"
 	#
 	# The following env parameters are propagated from jenkins:
 	#   SINGLE_PACKAGE_GIT_URL, SINGLE_PACKAGE_GIT_BRANCH,
@@ -105,7 +105,7 @@ else
 	unset SINGLE_PACKAGE_REVISION
 
 	for pkg in "${PACKAGES[@]}"; do
-		check_valid_package "$pkg"
+		logmust check_valid_package "$pkg"
 		# Skip if it was already build above
 		[[ "$pkg" == "$SINGLE_PACKAGE_NAME" ]] && continue
 		# shellcheck disable=SC2086

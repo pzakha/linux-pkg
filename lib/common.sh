@@ -188,6 +188,12 @@ function install_pkgs() {
 	logmust sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y "$@"
 }
 
+function install_source_package_build_deps() {
+	check_env UPSTREAM_SOURCE_PACKAGE
+	logmust sudo env DEBIAN_FRONTEND=noninteractive apt-get build-dep -y \
+		"$UPSTREAM_SOURCE_PACKAGE"
+}
+
 function read_package_list() {
 	local file="$1"
 
@@ -220,12 +226,12 @@ function install_shfmt() {
 
 function install_kernel_headers() {
 	determine_target_kernels
-	check_env EXPLICIT_KERNEL_VERSIONS
+	check_env KERNEL_VERSIONS
 
 	local kernel
 	local headers_pkgs=""
 
-	for kernel in $EXPLICIT_KERNEL_VERSIONS; do
+	for kernel in $KERNEL_VERSIONS; do
 		headers_pkgs="$headers_pkgs linux-headers-$kernel"
 	done
 
@@ -501,36 +507,36 @@ function get_kernel_for_platform() {
 
 #
 # Determine explicitly which kernel versions to build modules for and store
-# the value into EXPLICIT_KERNEL_VERSIONS, unless it is already set.
+# the value into KERNEL_VERSIONS, unless it is already set.
 #
 # We determine the target kernel versions based on the value passed for
-# KERNEL_VERSIONS. Here is a list of accepted values for KERNEL_VERSIONS:
+# TARGET_PLATFORMS. Here is a list of accepted values for TARGET_PLATFORMS:
 #  a) "default": to build for all supported platforms
 #  b) "aws gcp ...": to build for the default kernel version of those platforms.
 #  c) "4.15.0-1010-aws ...": to build for specific kernel versions
 #  d) mix of b) and c)
 #
 function determine_target_kernels() {
-	if [[ -n "$EXPLICIT_KERNEL_VERSIONS" ]]; then
+	if [[ -n "$KERNEL_VERSIONS" ]]; then
 		echo "Kernel versions to use to build modules:"
-		echo "  $EXPLICIT_KERNEL_VERSIONS"
+		echo "  $KERNEL_VERSIONS"
 		return 0
 	fi
-	if [[ -z "$KERNEL_VERSIONS" ]]; then
-		KERNEL_VERSIONS="default"
+	if [[ -z "$TARGET_PLATFORMS" ]]; then
+		TARGET_PLATFORMS="default"
 	fi
 
 	local supported_platforms="generic aws gcp azure kvm"
-	local kernel
 	local platform
 
-	if [[ "$KERNEL_VERSIONS" == default ]]; then
-		echo "KERNEL_VERSIONS set to 'default', so selecting all" \
+	if [[ "$TARGET_PLATFORMS" == default ]]; then
+		echo "TARGET_PLATFORMS set to 'default', so selecting all" \
 			"supported platforms"
-		KERNEL_VERSIONS="$supported_platforms"
+		TARGET_PLATFORMS="$supported_platforms"
 	fi
 
-	for kernel in $KERNEL_VERSIONS; do
+	local kernel
+	for kernel in $TARGET_PLATFORMS; do
 		for platform in $supported_platforms; do
 			if [[ "$kernel" == "$platform" ]]; then
 				logmust get_kernel_for_platform "$platform"
@@ -544,11 +550,11 @@ function determine_target_kernels() {
 		apt-cache show "linux-image-${kernel}" >/dev/null 2>&1 ||
 			die "Invalid target kernel '$kernel'"
 
-		EXPLICIT_KERNEL_VERSIONS="$EXPLICIT_KERNEL_VERSIONS $kernel"
+		KERNEL_VERSIONS="$KERNEL_VERSIONS $kernel"
 	done
 
 	echo "Kernel versions to use to build modules:"
-	echo "  $EXPLICIT_KERNEL_VERSIONS"
+	echo "  $KERNEL_VERSIONS"
 
 	return 0
 }

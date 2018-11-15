@@ -18,7 +18,7 @@
 TOP="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 source "$TOP/lib/common.sh"
 
-check_platform
+logmust check_platform
 
 function usage() {
 	[[ $# != 0 ]] && echo "$(basename "$0"): $*" >&2
@@ -76,7 +76,7 @@ fi
 
 query_git_credentials
 
-check_valid_package "$PACKAGE"
+logmust check_valid_package "$PACKAGE"
 PKGDIR="$TOP/packages/$PACKAGE"
 WORKDIR="$PKGDIR/tmp"
 

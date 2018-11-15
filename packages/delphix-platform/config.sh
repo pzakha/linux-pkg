@@ -35,10 +35,10 @@ function checkstyle() {
 
 function build() {
 	logmust determine_target_kernels
-	check_env EXPLICIT_KERNEL_VERSIONS
+	check_env KERNEL_VERSIONS
 
 	export KVERS
-	for KVERS in $EXPLICIT_KERNEL_VERSIONS; do
+	for KVERS in $KERNEL_VERSIONS; do
 		logmust cd "$WORKDIR/repo"
 		echo_bold "Building delphix-platform for kernel $KVERS"
 		logmust git reset --hard repo-HEAD

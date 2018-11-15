@@ -4,8 +4,7 @@
 # here as this will ensure they are installed instead of their Ubuntu
 # counterparts.
 #
-cloud-init
 
-# Uncomment once Delphix repositories are created
-#python-rtslib-fb
-#targetcli-fb
+cloud-init
+python-rtslib-fb
+targetcli-fb

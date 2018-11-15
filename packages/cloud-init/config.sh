@@ -22,30 +22,7 @@ DEFAULT_PACKAGE_GIT_URL="https://github.com/delphix/cloud-init.git"
 UPSTREAM_SOURCE_PACKAGE=cloud-init
 
 function prepare() {
-	logmust install_pkgs \
-		dh-python \
-		dh-systemd \
-		iproute2 \
-		pep8 \
-		po-debconf \
-		pyflakes \
-		python3 \
-		python3-configobj \
-		python3-httpretty \
-		python3-jinja2 \
-		python3-jsonpatch \
-		python3-jsonschema \
-		python3-mock \
-		python3-nose \
-		python3-oauthlib \
-		python3-pep8 \
-		python3-pyflakes \
-		python3-requests \
-		python3-serial \
-		python3-setuptools \
-		python3-six \
-		python3-unittest2 \
-		python3-yaml
+	logmust install_source_package_build_deps
 }
 
 function checkstyle() {

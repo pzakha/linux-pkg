@@ -18,7 +18,7 @@
 TOP="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 source "$TOP/lib/common.sh"
 
-check_platform
+logmust check_platform
 
 function exit_hook() {
 	echo_error "Script has exited unexpectedly."
@@ -170,7 +170,7 @@ function report_status_all() {
 if [[ -n "$SINGLE_PACKAGE_NAME" ]]; then
 	echo_bold "Updating only package '$SINGLE_PACKAGE_NAME' as \
 		SINGLE_PACKAGE_NAME is set"
-	check_valid_package "$SINGLE_PACKAGE_NAME"
+	logmust check_valid_package "$SINGLE_PACKAGE_NAME"
 	PACKAGES=("$SINGLE_PACKAGE_NAME")
 	echo_bold "auto-mege-blacklist.pkgs is ignored"
 	NO_MERGE_PACKAGES=()
@@ -183,7 +183,7 @@ fi
 
 for pkg in "${PACKAGES[@]}"; do
 	echo ""
-	check_valid_package "$pkg"
+	logmust check_valid_package "$pkg"
 
 	echo_bold "Updating package $pkg."
 

@@ -6,7 +6,5 @@
 #
 
 cloud-init
-
-# Uncomment once Delphix repositories are created
-#python-rtslib-fb
-#targetcli-fb
+python-rtslib-fb
+targetcli-fb

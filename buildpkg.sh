@@ -18,7 +18,7 @@
 TOP="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 source "$TOP/lib/common.sh"
 
-check_platform
+logmust check_platform
 
 function merge_with_upstream() {
 	local upstream_ref="refs/heads/upstream-HEAD"
@@ -126,8 +126,11 @@ function usage() {
 	echo "         [-b pkg_git_branch] [-v pkg_version] [-r pkg_revision]"
 	echo "         package"
 	echo ""
-	echo "  This script fetches and builds a package by calling various"
-	echo "  hooks in the package's config.sh."
+	echo "  This script builds a package based on its config.sh. If '-u' is"
+	ehco "  provided it will first attempt to merge the package with upstream."
+	echo "  If no options are provided it will fetch the package source from"
+	echo "  the master branch of the url defined in config.sh and then build"
+	echo "  it."
 	echo "  Options:"
 	echo ""
 	echo "    -i  Create initial repo from an upstream git repo or"
@@ -150,18 +153,18 @@ function usage() {
 do_checkstyle=false
 do_update=false
 do_initialize=false
-do_not_merge=false
+do_merge=true
 while getopts ':b:cg:hik:Mr:uv:' c; do
 	case "$c" in
 	g) export SINGLE_PACKAGE_GIT_URL="$OPTARG" ;;
 	b) export SINGLE_PACKAGE_GIT_BRANCH="$OPTARG" ;;
 	v) export SINGLE_PACKAGE_VERSION="$OPTARG" ;;
 	r) export SINGLE_PACKAGE_REVISION="$OPTARG" ;;
-	k) export KERNEL_VERSIONS="$OPTARG" ;;
+	k) export TARGET_PLATFORMS="$OPTARG" ;;
 	c) do_checkstyle=true ;;
 	i) do_initialize=true ;;
 	u) do_update=true ;;
-	M) do_not_merge=true ;;
+	M) do_merge=false ;;
 	h) usage ;;
 	*) usage "illegal option -- $OPTARG" ;;
 	esac
@@ -172,9 +175,9 @@ shift $((OPTIND - 1))
 PACKAGE=$1
 
 $do_update && $do_initialize && usage "-i and -u are exclusive"
-$do_not_merge && ! $do_update && usage "-M requires -u"
+! $do_merge && ! $do_update && usage "-M requires -u"
 
-check_valid_package "$PACKAGE"
+logmust check_valid_package "$PACKAGE"
 PKGDIR="$TOP/packages/$PACKAGE"
 WORKDIR="$PKGDIR/tmp"
 
@@ -225,7 +228,7 @@ if $do_update; then
 	stage update_upstream
 	logmust rm "$WORKDIR/updating-upstream"
 
-	if $do_not_merge; then
+	if ! $do_merge; then
 		echo_bold "Not attempting to merge with upstream since" \
 			"-M is set."
 		exit 0

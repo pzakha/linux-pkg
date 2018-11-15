@@ -28,11 +28,11 @@ function prepare() {
 
 function build() {
 	logmust determine_target_kernels
-	check_env EXPLICIT_KERNEL_VERSIONS
+	check_env KERNEL_VERSIONS
 
 	logmust cd "$WORKDIR/repo/module"
 	export KVERS
-	for KVERS in $EXPLICIT_KERNEL_VERSIONS; do
+	for KVERS in $KERNEL_VERSIONS; do
 		echo_bold "Building connstat-module-$KVERS"
 		logmust git clean -qdxf
 		logmust ./configure.sh

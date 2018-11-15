@@ -5,7 +5,7 @@ Delphix packages for the Ubuntu-based Delphix Appliance. It also has the
 functionality to automatically sync third-party packages with the upstream
 projects.
 
-### Table of Contents
+## Table of Contents
 
 1. [System Requirements](#system-requirements)
 1. [Getting Started](#getting-started)
@@ -13,18 +13,20 @@ projects.
 1. [Scripts](#scripts)
 1. [Environment Variables](#environment-variables)
 1. [Package Definition](#package-definition)
-  * [Package Variables](#package-variables)
-  * [Package Hooks](#package-hooks)
+    * [Package Variables](#package-variables)
+    * [Package Hooks](#package-hooks)
+    * [Package Environment Variables](#package-environment-variables)
+    * [Package WORKDIR](#package-workdir)
 1. [Adding New Packages](#adding-new-packages)
-  * [Third-party package](#third-party-package)
-  * [In-house package](#in-house-package)
+    * [Third-party package](#third-party-package)
+    * [In-house package](#in-house-package)
 1. [Testing your changes](#testing-your-changes)
 1. [Statement of Support](#statement-of-support)
 1. [License](#license)
 
 ## System Requirements
 
-This framework is intended to be ran on an Ubuntu 18.04 system with some basic
+This framework is intended to be run on an Ubuntu 18.04 system with some basic
 developer packages installed, such as git, and passwordless sudo enabled. Note
 that it will automatically install various build-dependencies on the system, so
 as a safety precaution it is currently restricted to only run on an AWS instance
@@ -50,8 +52,8 @@ should clone the `bootstrap-18-04` group on DCoA.
 Clone this repository on the build VM.
 
 ```
-$ git clone https://github.com/delphix/linux-pkg.git
-$ cd linux-pkg
+git clone https://github.com/delphix/linux-pkg.git
+cd linux-pkg
 ```
 
 ### Step 3. Run the setup script
@@ -59,7 +61,7 @@ $ cd linux-pkg
 The setup script installs all the dependencies required by the build framework.
 
 ```
-$ ./setup.sh
+./setup.sh
 ```
 
 ### Step 4. Build all the packages
@@ -69,7 +71,7 @@ build all the packages; kernel module packages will be built for the latest
 Ubuntu kernel version of each supported platform.
 
 ```
-$ ./buildall.sh
+./buildall.sh
 ```
 
 Packages will be stored in directory `artifacts/`.
@@ -85,20 +87,24 @@ branches.
 ### Building packages
 
 This task is relatively straight forward. Every package that needs to be built
-is built and a metapackage is created for selected third-party packages to make
-sure that they will be installed over packages provided by Ubuntu. You can see
-section [Scripts > buildall.sh](#buildallsh) below for more details.
+is built and a metapackage is created to make sure that third-party packages
+built by this framework will be installed over packages provided by Ubuntu.
+You can see section [Scripts > buildall.sh](#buildallsh) below for more details.
 
-### Updating packages
+### Updating third-party packages
 
 The idea behind this task is to reduce the amount of effort required to
-maintaining third-party packages and keep them up-to-date. Instead of following a
-more conventional approach of using tarballs and patches with all its drawbacks,
+maintain third-party packages and keep them up-to-date. Note that this task
+does not apply to packages created and maintained by Delphix, but only to
+third-party packages that Delphix modifies. Instead of following a
+[more conventional approach](http://packaging.ubuntu.com/html/patches-to-packages.html)
+of using tarballs and patches with all its drawbacks,
 we've decided to leverage the advantages offered by revision control. As such,
 we've adopted a well defined branching model for each third-party package.
 
 First of all, we have a Delphix repository on github for each third-party
-package that we build. The **master** branch of the package is the one we build,
+package that we build. Each repository has at least 2 branches: **master** and
+**upstreams/master**. The **master** branch of the package is the one we build,
 and contains Delphix changes. The **upstreams/master** branch is used to track
 the upstream version of the package. For packages that are not provided by
 Ubuntu but are available on git, the **upstreams/master** branch usually just
@@ -121,7 +127,7 @@ merge is considered failed if the build fails, which means that the **master**
 branch of the main repository will not be updated.
 
 Note that any updates are pushed independently to the **upstreams/master** and
-**master** branches.
+**master** branches of the Delphix repository for the package.
 
 Although for now we only support auto-updating the **master** branch, the
 framework is designed so that other branches could also be auto-updated.
@@ -145,7 +151,7 @@ Builds a single package. Package name must match a directory under
 [packages/](./packages).
 
 ```
- $ ./buildpkg.sh <package>
+./buildpkg.sh <package>
 ```
 
 The build will look at `packages/<package>/config.sh` for instructions on where
@@ -182,18 +188,18 @@ Updates all the packages listed in
 steps for updating one package:
 
 1. Run `buildpkg.sh -u <package>`. This will attempt to update the
-**upstreams/master** branch, and then attempt to merge **upstreams/master** into
-**master**. If changes are detected on **master**, then the package will be
-built. If a package is listed in
-[package-lists/auto-merge-blacklist.pkgs](./package-lists/auto-merge-blacklist.pkgs),
-then `-M` will be passed to `buildpkg.sh` and we will not attempt updating
-**master**.
+   **upstreams/master** branch, and then attempt to merge **upstreams/master**
+   into **master**. If changes are detected on **master**, then the package will
+   be built. If a package is listed in
+   [package-lists/auto-merge-blacklist.pkgs](./package-lists/auto-merge-blacklist.pkgs),
+   then `-M` will be passed to `buildpkg.sh` and we will not attempt updating
+   **master**.
 
-2. If changes are detected for **upstreams/master** or **master**, push them to
-the default repository for the package (e.g. `github.com/delphix/<package>`).
-This is done by invoking `push-updates.sh` for each branch. Note that
-**upstreams/master** will be updated even if merge with **master** failed,
-allowing developers to later perform the merge manually.
+1. If changes are detected for **upstreams/master** or **master**, push them to
+   the default repository for the package (e.g. `github.com/delphix/<package>`).
+   This is done by invoking `push-updates.sh` for each branch. Note that
+   **upstreams/master** will be updated even if merge with **master** failed,
+   allowing developers to later perform the merge manually.
 
 Each package is processed independently, so a failure to update one package
 doesn't affect the update of other packages. A report is generated at the end.
@@ -209,7 +215,7 @@ should be called after running `buildpkg.sh -u <package>`. The script should be
 invoked with:
 
 ```
- $ ./push-update.sh -u|-m <package>
+./push-update.sh -u|-m <package>
 ```
 
 Running it with `-u` will update **upstreams/master** and running it with `-m`
@@ -225,48 +231,48 @@ There's a set of environment variables that can be set to modify the operation
 of some of the scripts defined above.
 
 * **DISABLE_PLATFORM_CHECK**: Set to "true" to disable the check that makes sure
-we are running on an Ubuntu Bionic (18.04) system in AWS. Affects all scripts.
+  we are running on an Ubuntu Bionic (18.04) system in AWS. Affects all scripts.
 
 * **DRY_RUN**: Set to "true" to prevent `updateall.sh` from updating production
-package repositories. `updateall.sh` will invoke `push-updates.sh` with `-n`.
+  package repositories. `updateall.sh` will invoke `push-updates.sh` with `-n`.
 
 * **PUSH_GIT_USER, PUSH_GIT_PASSWORD**: Set to the git credentials used to push
-updates to package repositories. Affects `updateall.sh` and `push-updates.sh`.
+  updates to package repositories. Affects `updateall.sh` and `push-updates.sh`.
 
 * **BUILD_ALL**: Defaults to "true". When not set to "true", `buildall.sh` will
-build only one package, defined by environment variable SINGLE_PACKAGE_NAME.
+  build only one package, defined by environment variable SINGLE_PACKAGE_NAME.
 
 * **SINGLE_PACKAGE_NAME**: When running `buildall.sh`, this is required if
-BUILD_ALL != "true" and specifies the package to build. Note that if BUILD_ALL
-== "true", then all the packages will be built but other SINGLE_PACKAGE_*
-parameters mentioned below are used to override the defaults for the package.
-When running `updateall.sh`, if SINGLE_PACKAGE_NAME is set then only that
-package will be updated.
+  BUILD_ALL != "true" and specifies the package to build. Note that if BUILD_ALL
+  == "true", then all the packages will be built but other SINGLE_PACKAGE_*
+  parameters mentioned below are used to override the defaults for the package.
+  When running `updateall.sh`, if SINGLE_PACKAGE_NAME is set then only that
+  package will be updated.
 
 * **SINGLE_PACKAGE_GIT_URL, SINGLE_PACKAGE_GIT_BRANCH, SINGLE_PACKAGE_VERSION,
-SINGLE_PACKAGE_REVISION**: Applies to `buildpkg.sh`, and to `buildall.sh` but
-only when with SINGLE_PACKAGE_NAME set. Overrides defaults for the given
-package.
+  SINGLE_PACKAGE_REVISION**: Applies to `buildpkg.sh`, and to `buildall.sh` but
+  only when with SINGLE_PACKAGE_NAME set. Overrides defaults for the given
+  package.
 
 * **DEFAULT_REVISION**: Default revision to use for packages that do not have a
-revision defined. If not set, it will be auto-generated from the timestamp.
-Applies to `buildpkg.sh` and `buildall.sh`.
+  revision defined. If not set, it will be auto-generated from the timestamp.
+  Applies to `buildpkg.sh` and `buildall.sh`.
 
 * **DEFAULT_BRANCH**: Default git branch to use when fetching a package that
-does not have a branch explicitly defined. If not set, it will default to
-"master". Applies to `buildpkg.sh` and `buildall.sh`.
+  does not have a branch explicitly defined. If not set, it will default to
+  "master". Applies to `buildpkg.sh` and `buildall.sh`.
 
 * **CHECKSTYLE**: Applies to `buildall.sh`. Passes `-c` to `buildpkg.sh` when
-CHECKSTYLE == "true" to execute the `checkstyle` hook when building a package.
-See [Package Definition](#package-definition) section for more details about the
-hook.
+  CHECKSTYLE == "true" to execute the `checkstyle` hook when building a package.
+  See [Package Definition](#package-definition) section for more details about
+  the hook.
 
-* **KERNEL_VERSIONS**: Some packages build kernel modules. This specifies which
-kernel versions to build those packages for and accepts a space-separated list
-of values. If the value is a platform, such as "aws" or "generic", then it will
-auto-determine the default kernel version for the provided platform. If
-KERNEL_VERSIONS is unset or "default", then it will build for all supported
-platforms.
+* **TARGET_PLATFORMS**: Some packages build kernel modules. This specifies which
+  kernel versions to build those packages for and accepts a space-separated list
+  of values. If the value is a platform, such as "aws" or "generic", then it
+  will auto-determine the default kernel version for the provided platform. If
+  TARGET_PLATFORMS is unset or "default", then it will build for all supported
+  platforms.
 
 ## Package Definition
 
@@ -282,31 +288,32 @@ various functions that can be called from the hooks or the various scripts.
 Here is a list of variables that can be defined for a package:
 
 * **DEFAULT_PACKAGE_GIT_URL**: (Mandatory) Git repository to fetch the package
-source code from. This is also the repository that is used when pushing changes
-with the `push-updates.sh` script. Note that this must be an `https://` url.
+  source code from. This is also the repository that is used when pushing
+  changes with the `push-updates.sh` script. Note that this must be an
+  `https://` url.
 
 * **DEFAULT_PACKAGE_GIT_BRANCH**: (Optional) Default git branch to use along
-when fetching from or pushing to DEFAULT_PACKAGE_GIT_URL. If unset, it defaults
-to value of environment variable DEFAULT_BRANCH, which itself defaults to
-"master".
+  when fetching from or pushing to DEFAULT_PACKAGE_GIT_URL. If unset, it
+  defaults to value of environment variable DEFAULT_BRANCH, which itself
+  defaults to "master".
 
 * **DEFAULT_PACKAGE_VERSION**: (Mandatory) The version of the package is set to
-this value when it is built. **Note:** If this field is not set, then you should
-provide a mechanism in the [build](#build) hook to auto-determine the version
-from the source code.
+  this value when it is built. **Note:** If this field is not set, then you
+  should provide a mechanism in the [build](#build) hook to auto-determine the
+  version from the source code.
 
 * **DEFAULT_PACKAGE_REVISION**: (Optional) The revision of the package is set to
-this value when it is built (note that the full version of a package is
-"_VERSION-REVISION_"). If unset, it defaults to value of environment variable
-DEFAULT_REVISION.
+  this value when it is built (note that the full version of a package is
+  "_VERSION-REVISION_"). If unset, it defaults to value of environment variable
+  DEFAULT_REVISION.
 
 * **UPSTREAM_SOURCE_PACKAGE**: (Optional) Third-party packages that have an
-[update_upstream](#update-upstream) hook and are updated from an Ubuntu source
-package should set this to the name of the source package.
+  [update_upstream](#update-upstream) hook and are updated from an Ubuntu source
+  package should set this to the name of the source package.
 
 * **UPSTREAM_GIT_URL, UPSTREAM_GIT_BRANCH**: (Optional) Third-party packages
-that have an [update_upstream](#update-upstream) hook and are updated from a git
-repository should set this to the upstream git url and branch.
+  that have an [update_upstream](#update-upstream) hook and are updated from a
+  git repository should set this to the upstream git url and branch.
 
 ### Package hooks
 
@@ -348,6 +355,61 @@ After the `update_upstream()` hook is called, and if changes are detected,
 `buildpkg.sh` will proceed to merge the **upstream-HEAD** branch into
 **repo-HEAD** and build the resulting code.
 
+### Package environment variables
+
+In addition to any variables defined by the package itself, a few environment
+variables are set-up by the framework. Here is a quick list:
+
+* **PACKAGE**: The name of the package being built.
+
+* **PACKAGE_GIT_URL, PACKAGE_GIT_BRANCH, PACKAGE_VERSION, PACKAGE_REVISION**:
+  Those variables are set by the framework depending on the corresponding
+  **DEFAULT_?** variables defined in the package's `config.sh` and on other
+  environment variables that are passed to the framework. For more details,
+  refer to `get_settings_from_env()` from [lib/common.sh](./lib/common.sh).
+
+* **WORKDIR**: Directory where the package is fetched, built, etc. See
+  [Package WORKDIR](#package-workdir).
+
+* **KERNEL_VERSIONS**: Space separated list of kernel versions that the package
+  should be built for. `determine_kernel_versions()` must be called before using
+  this variable.
+
+### Package WORKDIR
+
+Each package is being fetched, built and updated in directory
+`linux-pkg/packages/<package>/tmp/`, referred to as `WORKDIR`.
+
+The following sub-directories are created in `WORKDIR`:
+
+* **repo**: where the repository is fetched and built.
+
+* **artifacts**: where the build artifacts are stored.
+
+* **source**: where the source package is fetched when updating upstream from
+  a source package.
+
+The following files are used as status indicators in `WORKDIR`:
+
+* **building**: created when package is being built, deleted on success.
+
+* **updating-upstream**: created when updating upstream branch, deleted on
+  success.
+
+* **merging**: created when package is being merged with upstream branch,
+  deleted on success.
+
+* **upstream-updated**: created if **upstream-HEAD** has updates that should
+  be pushed.
+
+* **repo-updated**: created if **repo-HEAD** has updates that should be pushed,
+  following a merge.
+
+Finally, when building a package, build info should be stored in the
+**build_info** file under `WORKDIR`. To store some default git info,
+`store_git_info()` can be called. **build_info** files for each package are
+consumed by the [metapackage](./metapackage) when running
+[buildall.sh](#buildallsh).
 
 ## Adding new packages
 
@@ -355,8 +417,7 @@ When considering adding a new package, the workflow will depend on whether the
 package is a [third-party package](#third-party-package) or
 [in-house package](#in-house-package).
 
-**Note For Delphix Employees**
-
+**Note For Delphix Employees**:
 If you are thinking of adding a new package to this framework, you should first
 read the
 [Delphix Open-Source Policy](https://docs.delphix.com/cto/ip-strategy/outbound-open-source).
@@ -370,8 +431,8 @@ package as the package name. You can get the source package name for a given
 package by running:
 
 ```
-$ sudo apt update
-$ sudo apt show <package name> | grep Source
+sudo apt update
+sudo apt show <package name> | grep Source
 ```
 
 It is possible that the source package is not provided and so the command above
@@ -437,8 +498,8 @@ Next step is to push the upstream code to the newly created repository using the
 prompt you for your git credentials.
 
 ```
-$ ./push-updates -u <package>
-$ ./push-updates -m <package>
+./push-updates -u <package>
+./push-updates -m <package>
 ```
 
 #### Step 6. Build the package
@@ -448,7 +509,7 @@ dependencies. For an Ubuntu source package, those dependencies can be listed by
 running:
 
 ```
-$ apt-cache showsrc <source package name> | grep "Build-Depends"
+apt-cache showsrc <source package name> | grep "Build-Depends"
 ```
 
 For other packages, you can usually find the build dependencies in the project's
@@ -483,7 +544,7 @@ for more details.
 Once this is all ready, you can try building the package by running:
 
 ```
-$ ./buildpkg.sh <package>
+./buildpkg.sh <package>
 ```
 
 #### Step 7. Make the package auto-updatable
@@ -493,9 +554,10 @@ recommended), you'll need to add the [update_upstream()](#update-upstream) hook
 to `config.sh`. You should use the following functions provided by
 [lib/common.sh](./lib/common.sh):
 
-- `update_upstream_from_source_package()` if `UPSTREAM_SOURCE_PACKAGE` is set.
-- `update_upstream_from_git()` if `UPSTREAM_GIT_URL` & `UPSTREAM_GIT_BRANCH` are
-set.
+* `update_upstream_from_source_package()` if `UPSTREAM_SOURCE_PACKAGE` is set.
+
+* `update_upstream_from_git()` if `UPSTREAM_GIT_URL` & `UPSTREAM_GIT_BRANCH` are
+  set.
 
 #### Step 8. Add package to package-lists
 
@@ -529,10 +591,11 @@ the name doesn't conflict with an existing Ubuntu package.
 You'll need to create a new directory: `packages/<package>/` and add a new
 `config.sh` file in it. In `config.sh`, you'll need to define two variables:
 
-- `DEFAULT_PACKAGE_GIT_URL`: the `https://` git url for the source code of the
-package.
-- `DEFAULT_PACKAGE_VERSION`: the version of the package. In case of doubt, just
-use `1.0.0`.
+* `DEFAULT_PACKAGE_GIT_URL`: the `https://` git url for the source code of the
+  package.
+
+* `DEFAULT_PACKAGE_VERSION`: the version of the package. In case of doubt, just
+  use `1.0.0`.
 
 e.g.:
 
@@ -573,21 +636,21 @@ TODO
 
 #### Add package to package-lists
 
-- Add the new package to
-[package-lists/buildall.pkgs](./package-lists/buildall.pkgs) so that it is built
-by `buildall.sh`.
+* Add the new package to
+  [package-lists/buildall.pkgs](./package-lists/buildall.pkgs) so that it is
+  built by `buildall.sh`.
 
-- If this is a third-party package that is to be auto-updated by `updateall.sh`,
-it should also be added to
-[package-lists/updateall.pkgs](./package-lists/updateall.pkgs).
+* If this is a third-party package that is to be auto-updated by `updateall.sh`,
+  it should also be added to
+  [package-lists/updateall.pkgs](./package-lists/updateall.pkgs).
 
-- If this is a third-party package that is also provided by Ubuntu, it must be
-added to [package-lists/metapackage.pkgs](./package-lists/metapackage.pkgs) to
-make sure that it is installed instead of the stock Ubuntu package.
+* If this is a third-party package that is also provided by Ubuntu, it must be
+  added to [package-lists/metapackage.pkgs](./package-lists/metapackage.pkgs) to
+  make sure that it is installed instead of the stock Ubuntu package.
 
-- To make sure that the new package is included in the Delphix Appliance by
-appliance-build, it should be added as a dependency to an existing package such
-as `delphix-platform` or `delphix-virtualization`.
+* To make sure that the new package is included in the Delphix Appliance by
+  appliance-build, it should be added as a dependency to an existing package
+  such as `delphix-platform` or `delphix-virtualization`.
 
 #### Make the package official
 
@@ -597,20 +660,20 @@ Once your new package builds and has been tested in the product, the next step
 is to create an official repository for it.
 
 1. First, you should read
-[Delphix Open-Source Policy](https://docs.delphix.com/cto/ip-strategy/outbound-open-source)
-if you haven't already, and provide the necessary info so that a
-`github.com/delphix/<package>` repository can be created for it. You'll need to
-push the **master** branch from your developer repository, as well as the
-**upstreams/master** branch if it is a third-party package. Note that if you
-have modified **master** (i.e. it diverges from **upstreams/master**), you
-should submit your changes for review before pushing them.
+   [Delphix Open-Source Policy](https://docs.delphix.com/cto/ip-strategy/outbound-open-source)
+   if you haven't already, and provide the necessary info so that a
+   `github.com/delphix/<package>` repository can be created for it. You'll need
+   to push the **master** branch from your developer repository, as well as the
+   **upstreams/master** branch if it is a third-party package. Note that if you
+   have modified **master** (i.e. it diverges from **upstreams/master**), you
+   should submit your changes for review before pushing them.
 
-2. If this is a third-party package that is to be auto-updated by Delphix
-automation, you should also make sure the `github.com/delphix-devops-bot` user
-is added as a collaborator to the repository.
+1. If this is a third-party package that is to be auto-updated by Delphix
+   automation, you should also make sure the `github.com/delphix-devops-bot`
+   user is added as a collaborator to the repository.
 
-3. Update `DEFAULT_PACKAGE_GIT_URL` in `packages/<package>/config.sh` to the
-	official repository.
+1. Update `DEFAULT_PACKAGE_GIT_URL` in `packages/<package>/config.sh` to the
+   official repository.
 
 ## Testing your changes
 

@@ -6,8 +6,8 @@
 cloud-init
 connstat
 delphix-platform
+python-rtslib-fb
+targetcli-fb
 
 # Uncomment once Delphix repositories are created
 #bpftrace
-#python-rtslib-fb
-#targetcli-fb
