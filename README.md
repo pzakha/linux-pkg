@@ -21,6 +21,7 @@ projects.
     * [Third-party package](#third-party-package)
     * [In-house package](#in-house-package)
 1. [Testing your changes](#testing-your-changes)
+1. [Versions and Branches](#versions-and-branches)
 1. [Statement of Support](#statement-of-support)
 1. [License](#license)
 
@@ -684,6 +685,42 @@ TODO
 ### Testing changes to linux-pkg
 
 TODO
+
+## Versions and Branches
+
+The framework is designed in a way to allow easy integration with the Delphix
+release process. The idea is that both the package build artifacts (`.debs`)
+and package source code should be available for each Delphix release.
+
+Regarding the build artifacts, those should be taken care of by the existing
+Delphix build artifacts storage policy, available
+[here](https://docs.google.com/document/d/1-u_l9tLMQaYDOGlwfjhZf9O2pPcmOCVEoOWCi9CxM_A/view).
+The relevant code for managing the build artifacts is outside of the scope of
+this project and lies in the `devops-gate`.
+
+Regarding the source code, we expect that each package repository and the
+linux-pkg repository itself follows the Delphix branching policy outlined
+[here](https://docs.delphix.com/pages/viewpage.action?spaceKey=RE&title=New+Branching+Mechanism).
+When creating a new branch or release for the Delphix Appliance, an external
+script should create the relevant branch or tag for each repository. The
+branch or tag should then be passed to the build in the `DEFAULT_BRANCH`
+environment variable.
+
+### Future work
+
+When building packages for an older version of the Delphix Appliance, the build
+image will need to be picked accordingly. We are currently using
+`bootstrap-18-04`, but this will not be the case anymore once we switch to a
+newer Ubuntu distribution.
+
+Regarding auto-update of third-party packages, we'll most likely want to enable
+support for other branches than master, especially _stage_ ones. This way we'd
+be able to automatically pull in security updates for our third-party packages
+that track Ubuntu source packages.
+
+This means that we will also need integration with our Ubuntu package mirrors.
+The auto-update process will need to track the proper archive when fetching
+source packages.
 
 ## Statement of Support
 
