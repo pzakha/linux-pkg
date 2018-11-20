@@ -16,24 +16,27 @@
 #
 # shellcheck disable=SC2034
 
-DEFAULT_PACKAGE_GIT_URL="https://github.com/delphix/delphix-platform.git"
+DEFAULT_PACKAGE_GIT_URL="https://github.com/delphix/delphix-kernel.git"
 DEFAULT_PACKAGE_VERSION="1.0.0"
 
 function prepare() {
 	logmust install_pkgs \
 		debhelper \
-		dpkg-dev \
-		shellcheck \
-		wget
-	logmust install_shfmt
-}
-
-function checkstyle() {
-	logmust cd "$WORKDIR/repo"
-	logmust make check
+		devscripts
 }
 
 function build() {
-	logmust dpkg_buildpackage_default
+	logmust determine_target_kernels
+	check_env KERNEL_VERSIONS
+
+	export KVERS
+	for KVERS in $KERNEL_VERSIONS; do
+		logmust cd "$WORKDIR/repo"
+		echo_bold "Building delphix-kernel for kernel $KVERS"
+		logmust git reset --hard repo-HEAD
+		logmust git clean -qdxf
+		logmust ./configure.sh
+		logmust dpkg_buildpackage_default
+	done
 	logmust store_git_info
 }
