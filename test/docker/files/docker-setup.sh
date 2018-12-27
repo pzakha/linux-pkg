@@ -6,40 +6,40 @@ function create_git_repo() {
 	local repo="$1"
 	local dir="/srv/git/${repo}.git"
 
-	sudo rm -rf "$dir"
-	sudo mkdir "$dir"
+	rm -rf "$dir"
+	mkdir "$dir"
 	cd "$dir"
-	sudo git init --bare
-	sudo git config --local --add http.receivepack true
-	sudo git update-server-info
-	sudo chown -R www-data:www-data "$dir"
-	sudo chmod -R 754 "$dir"
+	git init --bare
+	git config --local --add http.receivepack true
+	git update-server-info
+	chown -R www-data:www-data "$dir"
+	chmod -R 754 "$dir"
 }
 
-sudo apt update
-sudo apt install git git-core fcgiwrap nginx -y
+apt update
+apt install git git-core fcgiwrap nginx -y
 
 # User: linux-pkg-test, pw: testpw
 # Created using htpasswd from package apache2-utils:
 #   htpasswd -c /etc/nginx/.htpasswd linux-pkg-test
 #
-sudo cp "$FILES/htpasswd" /etc/nginx/.htpasswd
+cp "$FILES/htpasswd" /etc/nginx/.htpasswd
 
-sudo cp "$FILES/nginx-git.conf" /etc/nginx/sites-available/
-sudo cp "$FILES/git-http-backend.conf" /etc/nginx/
+cp "$FILES/nginx-git.conf" /etc/nginx/sites-available/
+cp "$FILES/git-http-backend.conf" /etc/nginx/
 
-sudo rm -f /etc/nginx/sites-enabled/*
-sudo ln -s /etc/nginx/sites-available/nginx-git.conf \
+rm -f /etc/nginx/sites-enabled/*
+ln -s /etc/nginx/sites-available/nginx-git.conf \
 	/etc/nginx/sites-enabled/nginx-git.conf
 
-sudo openssl req \
+openssl req \
     -x509 -nodes -days 3650 -newkey rsa:2048 \
     -keyout /etc/ssl/private/linux-pkg.key \
     -out /etc/ssl/certs/linux-pkg.crt \
     -subj "/C=US/ST=California/L=San Francisco/O=Engineering/OU=Engineering/CN=localhost"
 
-sudo mkdir -p /srv/git/
+mkdir -p /srv/git/
 
-sudo systemctl restart nginx
+systemctl restart nginx
 
 create_git_repo test-repo
