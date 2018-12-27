@@ -16,8 +16,8 @@ function create_git_repo() {
 	chmod -R 754 "$dir"
 }
 
-apt update
-apt install git git-core fcgiwrap nginx -y
+apt-get update
+apt-get install git git-core fcgiwrap nginx -y
 
 # User: linux-pkg-test, pw: testpw
 # Created using htpasswd from package apache2-utils:
@@ -39,7 +39,5 @@ openssl req \
     -subj "/C=US/ST=California/L=San Francisco/O=Engineering/OU=Engineering/CN=localhost"
 
 mkdir -p /srv/git/
-
-systemctl restart nginx
 
 create_git_repo test-repo
