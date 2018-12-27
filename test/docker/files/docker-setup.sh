@@ -1,5 +1,7 @@
 #!/bin/bash -ex
 
+FILES=/files
+
 function create_git_repo() {
 	local repo="$1"
 	local dir="/srv/git/${repo}.git"
@@ -15,13 +17,16 @@ function create_git_repo() {
 }
 
 sudo apt update
-sudo apt install fcgiwrap nginx -y
+sudo apt install git git-core fcgiwrap nginx -y
 
 # User: linux-pkg-test, pw: testpw
-sudo cp git-server/htpasswd /etc/nginx/.htpasswd
+# Created using htpasswd from package apache2-utils:
+#   htpasswd -c /etc/nginx/.htpasswd linux-pkg-test
+#
+sudo cp "$FILES/htpasswd" /etc/nginx/.htpasswd
 
-sudo cp git-server/nginx-git.conf /etc/nginx/sites-available/
-sudo cp git-server/git-http-backend.conf /etc/nginx/
+sudo cp "$FILES/nginx-git.conf" /etc/nginx/sites-available/
+sudo cp "$FILES/git-http-backend.conf" /etc/nginx/
 
 sudo rm -f /etc/nginx/sites-enabled/*
 sudo ln -s /etc/nginx/sites-available/nginx-git.conf \
