@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-rm -rf tmp
+sudo rm -rf tmp
 mkdir tmp tmp/srv tmp/srv/git tmp/srv/archive tmp/aptly
 
 #

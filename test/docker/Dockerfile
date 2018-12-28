@@ -39,5 +39,5 @@ RUN apk add --update nginx git-daemon git fcgiwrap spawn-fcgi bash && \
 #   error log.
 # - launch nginx in the foreground as the main process.
 #
-CMD spawn-fcgi -s /run/fcgi.sock -M 0666 -- /usr/bin/fcgiwrap -f && \
+CMD spawn-fcgi -s /run/fcgi.sock -- /usr/bin/fcgiwrap -f && \
     nginx -g "daemon off;"
