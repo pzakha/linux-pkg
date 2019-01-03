@@ -177,9 +177,9 @@ if [[ -n "$UPDATE_PACKAGE_NAME" ]]; then
 	echo_bold "auto-mege-blacklist.pkgs is ignored"
 	NO_MERGE_PACKAGES=()
 else
-	logmust read_package_list "$TOP/package-lists/updateall.pkgs"
+	logmust read_package_list "updateall.pkgs"
 	PACKAGES=("${_RET_LIST[@]}")
-	logmust read_package_list "$TOP/package-lists/auto-merge-blacklist.pkgs"
+	logmust read_package_list "auto-merge-blacklist.pkgs"
 	NO_MERGE_PACKAGES=("${_RET_LIST[@]}")
 fi
 

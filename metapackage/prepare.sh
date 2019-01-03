@@ -21,9 +21,9 @@ source "$TOP/lib/common.sh"
 
 METADIR="$TOP/metapackage/"
 
-logmust read_package_list "$TOP/package-lists/buildall.pkgs"
+logmust read_package_list "buildall.pkgs"
 ALL_PACKAGES=("${_RET_LIST[@]}")
-logmust read_package_list "$TOP/package-lists/metapackage.pkgs"
+logmust read_package_list "metapackage.pkgs"
 DEPENDS_PACKAGES=("${_RET_LIST[@]}")
 
 shopt -s failglob

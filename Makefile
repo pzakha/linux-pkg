@@ -31,7 +31,13 @@ $(ALL_PACKAGES): setup
 setup:
 	./setup.sh
 
+test: clean setup check
+	test/run-tests.sh
+
 clean:
+	@sudo rm -rf test/tmp
+	@sudo rm -rf test/docker/tmp
+	@sudo rm -rf packages/_test*
 	@sudo rm -rf packages/*/tmp
 	@rm -rf artifacts
 	@(cd metapackage && make clean)

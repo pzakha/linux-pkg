@@ -22,15 +22,26 @@ logmust check_running_system
 logmust sudo apt-get update
 
 #
+# - aptly and docker.io are used by the test framework
+# - bats is the test framework
 # - debhelper is used to build most Debian packages. It is required by
 #   the dpkg_buildpackage_default() command.
 # - devscripts provides dch, which is used to automatically generate and update
 #   changelog entries. It is required by the dpkg_buildpackage_default()
 #   command.
+# - git is used to fetch the source code for packages
+# - shellcheck and shfmt are used by make check for checkstyle
 #
 logmust install_pkgs \
+	aptly \
+	bats \
+	docker.io \
 	debhelper \
-	devscripts
+	devscripts \
+	git \
+	shellcheck
+
+logmust install_shfmt
 
 logmust git config --global user.email "eng@delphix.com"
 logmust git config --global user.name "Delphix Engineering"

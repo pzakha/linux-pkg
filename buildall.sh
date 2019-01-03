@@ -66,7 +66,7 @@ fi
 # but instead rely on the buildall.pkgs package list. This allows us to
 # add new packages to the framework that aren't part of the buildall bundle.
 #
-logmust read_package_list "$TOP/package-lists/buildall.pkgs"
+logmust read_package_list "buildall.pkgs"
 PACKAGES=("${_RET_LIST[@]}")
 
 for pkg in "${PACKAGES[@]}"; do

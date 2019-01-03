@@ -409,6 +409,11 @@ function install_source_package_build_deps() {
 function read_package_list() {
 	local file="$1"
 
+	check_env TOP
+
+	# We allow the test framework to provide a custom
+	# directory for package lists
+	local dir="${_PACKAGE_LISTS_DIR:-$TOP/package-lists}"
 	local pkg
 	local line
 
@@ -422,7 +427,7 @@ function read_package_list() {
 		[[ ${pkg:0:1} == "#" ]] && continue
 		check_package_exists "$pkg"
 		_RET_LIST+=("$pkg")
-	done <"$file" || die "Failed to read package list: $file"
+	done <"$dir/$file" || die "Failed to read package list: $dir/$file"
 }
 
 function install_shfmt() {
