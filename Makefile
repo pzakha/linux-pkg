@@ -38,7 +38,7 @@ test: clean setup check
 clean:
 	@sudo rm -rf test/tmp
 	@sudo rm -rf test/docker/tmp
-	@sudo rm -rf packages/_test*
+	@sudo rm -rf packages/-test-*
 	@sudo rm -rf packages/*/tmp
 	@rm -rf artifacts
 	@(cd metapackage && make clean)

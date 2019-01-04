@@ -1,18 +1,14 @@
 #!/bin/bash -e
 
-DOCKER_IMG=linux-pkg-nginx-img
 TEST_ROOT="$LINUX_PKG_ROOT/test"
 TEST_TMP="$TEST_ROOT/tmp"
-TEST_WS="$TEST_TMP/ws"
-SRV_DIR="$LINUX_PKG_ROOT/test/docker/tmp/srv"
+FIXTURES_DIR="$TEST_ROOT/fixtures"
+DOCKER_GIT_DIR="$TEST_ROOT/docker/tmp/srv/git"
+
+DOCKER_IMG=linux-pkg-nginx-img
 
 # BASE_GIT_URL is meant to be useable in config.sh for test packages
-export BASE_GIT_URL="https://localhost/git/"
-
-function setup_test_ws() {
-	rm -rf "$TEST_WS"
-	mkdir "$TEST_WS"
-}
+export BASE_GIT_URL="https://localhost/git"
 
 #
 # This function checks the contents of a deb artifact generated when building
@@ -53,22 +49,26 @@ function check_file_in_package_deb() {
 	return "$result"
 }
 
-function create_git_repo() {
+# TODO: remove
+function create_git_repo2() {
 	local repo="$1"
 
 	docker exec "$DOCKER_IMG" create-repo.sh "$repo"
 }
 
-function create_git_repo2() {
+function create_git_repo() {
 	local repo="$1"
-	local dir="$SRV_DIR/git/${repo}.git"
+	local dir="$DOCKER_GIT_DIR/${repo}.git"
 
+	# Note: we need to create the repository as root because the nginx and
+	# fastcgi daemons run as root in the container.
+	#
 	sudo mkdir "$dir"
 	pushd "$dir"
 	sudo git init --bare
 	sudo git config --local http.receivepack true
 	sudo git update-server-info
-	popd "$dir"
+	popd
 }
 
 function destroy_git_repo() {
@@ -81,8 +81,46 @@ function cleanup_git_repos() {
 	sudo rm -rf "$SRV_DIR"/git/*
 }
 
-function get_repo_url() {
-	local repo="$1"
+function deploy_package_fixture_default() {
+	local package="$1"
 
-	echo "https://localhost/git/${repo}.git"
+	mkdir "$LINUX_PKG_ROOT/packages/$package"
+
+	deploy_package_config "$package" config.sh
+	deploy_package_git_repo "$package" repo "$package"
+}
+
+function deploy_package_config() {
+	local package="$1"
+	local config_file="$2"
+
+	local pkg_dir="$FIXTURES_DIR/packages/$package"
+	[[ -f "$pkg_dir/$config_file" ]]
+	[[ -d "$LINUX_PKG_ROOT/packages/$package" ]]
+
+	cp "$pkg_dir/$config_file" "$LINUX_PKG_ROOT/packages/$package/config.sh"
+}
+
+function deploy_package_git_repo() {
+	local package="$1"
+	local repo_dir="$2"
+	local repo_name="$3"
+
+	local pkg_dir="$FIXTURES_DIR/packages/$package"
+	[[ -d "$pkg_dir" ]]
+	[[ -d "$pkg_dir/$repo_dir" ]]
+
+	create_git_repo "$repo_name"
+	rm -rf "$TEST_TMP/repo"
+	git clone "$BASE_GIT_URL/${repo_name}.git" "$TEST_TMP/repo"
+	
+	pushd "$TEST_TMP/repo"
+	shopt -s dotglob
+	cp -r "$pkg_dir/$repo_dir"/* .
+	git add -f .
+	git commit -m 'initial commit'
+	git push origin HEAD:master
+	popd
+
+	rm -rf "$TEST_TMP/repo"
 }
