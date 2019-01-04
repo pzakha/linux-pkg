@@ -15,6 +15,7 @@
 #
 
 ALL_PACKAGES = $(shell find packages -maxdepth 1 -mindepth 1 -exec basename {} \;)
+SHELL_FILES = $(shell find . -type f -name '*.sh' -o -name '*.bash')
 
 .PHONY: \
 	clean \
@@ -46,9 +47,9 @@ clean:
 
 shellcheck:
 	shellcheck --exclude=SC1090,SC1091 \
-		$$(find . -type f -name '*.sh')
+		$$(find . -type f -name '*.sh' -o -name '*.bash')
 
 shfmtcheck:
-	! shfmt -d $$(find . -type f -name '*.sh') | grep .
+	shfmt -d $$(find . -type f -name '*.sh' -o -name '*.bash')
 
 check: shellcheck shfmtcheck

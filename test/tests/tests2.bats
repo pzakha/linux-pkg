@@ -9,4 +9,5 @@ load lib/test-common
 @test "bye2" {
 	echo "$LINUX_PKG_ROOT"
 	[[ -z "$LINUX_PKG_ROOT" ]]
+	echo test
 }
