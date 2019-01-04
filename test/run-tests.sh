@@ -17,24 +17,31 @@
 
 cd "${BASH_SOURCE%/*}"
 
-trap cleanup EXIT
+trap exit_hook EXIT
 
 LINUX_PKG_ROOT=$(readlink -f ..)
 export LINUX_PKG_ROOT
 
-function cleanup() {
+function exit_hook() {
 	local ret=$?
 
-	[[ -n "$_LINUX_PKG_DEBUG" ]] && return
-	docker stop linux-pkg-nginx-img >/dev/null 2>&1 || true
-	docker rm linux-pkg-nginx-img >/dev/null 2>&1 || true
-	sudo rm -f /etc/apt/sources.list.d/linux-pkg.list
-	sudo rm -rf tmp test/tmp ../packages/_test*
+	[[ -n "$_LINUX_PKG_DEBUG" ]] || cleanup
 
 	return "$ret"
 }
 
-sudo rm -rf tmp
+function cleanup() {
+	local ret=$?
+
+	docker stop linux-pkg-nginx-img >/dev/null 2>&1 || true
+	docker rm linux-pkg-nginx-img >/dev/null 2>&1 || true
+	sudo rm -f /etc/apt/sources.list.d/linux-pkg.list
+	sudo rm -rf tmp docker/tmp ../packages/test--*
+
+	return "$ret"
+}
+
+cleanup
 mkdir tmp
 
 echo "Launching nginx container ..."

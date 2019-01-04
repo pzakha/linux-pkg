@@ -9,6 +9,8 @@ DOCKER_IMG=linux-pkg-nginx-img
 
 # BASE_GIT_URL is meant to be useable in config.sh for test packages
 export BASE_GIT_URL="https://localhost/git"
+# prevent git from asking password when cloning from invalid url
+export GIT_TERMINAL_PROMPT=0
 
 #
 # This function checks the contents of a deb artifact generated when building
@@ -111,16 +113,16 @@ function deploy_package_git_repo() {
 	[[ -d "$pkg_dir/$repo_dir" ]]
 
 	create_git_repo "$repo_name"
-	rm -rf "$TEST_TMP/repo"
-	git clone "$BASE_GIT_URL/${repo_name}.git" "$TEST_TMP/repo"
-	
+	sudo rm -rf "$TEST_TMP/repo"
+	git clone "$DOCKER_GIT_DIR/${repo_name}.git" "$TEST_TMP/repo"
+
 	pushd "$TEST_TMP/repo"
 	shopt -s dotglob
 	cp -r "$pkg_dir/$repo_dir"/* .
 	git add -f .
 	git commit -m 'initial commit'
-	git push origin HEAD:master
+	sudo git push origin HEAD:master
 	popd
 
-	rm -rf "$TEST_TMP/repo"
+	sudo rm -rf "$TEST_TMP/repo"
 }

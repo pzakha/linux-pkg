@@ -7,5 +7,5 @@ load ../lib/test-common
 }
 
 @test "deploy package" {
-	deploy_package_fixture_default "-test-simple"
+	deploy_package_fixture_default "test--simple"
 }

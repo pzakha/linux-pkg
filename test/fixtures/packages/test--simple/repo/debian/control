@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-Source: test-simple-package
+Source: test--simple
 Section: misc
 Priority: optional
 Maintainer: Linux-pkg <eng@example.com>

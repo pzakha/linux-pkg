@@ -3,8 +3,7 @@
 # Make sure are current directory is the parent of this script
 cd "${BASH_SOURCE%/*}"
 
-sudo rm -rf tmp
-mkdir tmp tmp/srv tmp/srv/git tmp/srv/archive tmp/aptly
+mkdir -p tmp/srv/git
 
 #
 # Create a self-signed certificate that is required to serve git through HTTPS.
@@ -17,10 +16,6 @@ openssl req \
 
 # Add the certificate we just created to our known certificates
 sudo ln -sf "$PWD/tmp/linux-pkg.crt" /etc/ssl/certs/
-
-# Cleanup previous images
-docker stop linux-pkg-nginx-img >/dev/null 2>&1 || true
-docker rm linux-pkg-nginx-img >/dev/null 2>&1 || true
 
 docker build -t linux-pkg-nginx .
 
