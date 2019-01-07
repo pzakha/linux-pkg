@@ -19,5 +19,15 @@ sudo ln -sf "$PWD/tmp/linux-pkg.crt" /etc/ssl/certs/
 
 docker build -t linux-pkg-nginx .
 
-docker run -d -p 80:80 -p 443:443 --mount src="$(pwd)/tmp/srv",target=/srv,type=bind \
+docker run -d -p 443:443 --mount src="$(pwd)/tmp/srv",target=/srv,type=bind \
 	--name linux-pkg-nginx-img linux-pkg-nginx
+
+# Check that the container is healthy
+# TODO: make this more reliable
+sleep 1
+if [[ $(docker inspect --format '{{.State.Running}}' \
+	linux-pkg-nginx-img) != true ]]; then
+	echo "ERROR: Container is not running. Docker logs:" >&2
+	docker logs linux-pkg-nginx-img >&2
+	exit 1
+fi
