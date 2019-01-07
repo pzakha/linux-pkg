@@ -6,6 +6,13 @@ load ../lib/test-common
 	[[ 3 -eq 3 ]]
 }
 
-@test "deploy package" {
-	deploy_package_fixture_default "test--simple"
+function teardown() {
+	cleanup_git_repos
+	cleanup_test_packages
+}
+
+@test "build simple package" {
+	deploy_package_fixture_default test--simple
+	"$LINUX_PKG_ROOT/buildpkg.sh" test--simple
+	check_package_for_file test--simple /etc/dummy.txt
 }

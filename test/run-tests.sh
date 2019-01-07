@@ -33,10 +33,10 @@ function exit_hook() {
 function cleanup() {
 	local ret=$?
 
-	docker stop linux-pkg-nginx-img >/dev/null 2>&1 || true
-	docker rm linux-pkg-nginx-img >/dev/null 2>&1 || true
+	docker/cleanup.sh
 	sudo rm -f /etc/apt/sources.list.d/linux-pkg.list
-	sudo rm -rf tmp docker/tmp ../packages/test--*
+	sudo rm -rf tmp ../packages/test--*
+	echo "Cleanup completed"
 
 	return "$ret"
 }
@@ -54,3 +54,5 @@ if [[ $# -eq 0 ]]; then
 else
 	bats "$@"
 fi
+
+trap - EXIT

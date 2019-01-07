@@ -36,8 +36,8 @@ test: clean setup check
 	test/run-tests.sh
 
 clean:
+	@test/docker/cleanup.sh
 	@sudo rm -rf test/tmp
-	@sudo rm -rf test/docker/tmp
 	@sudo rm -rf packages/test--*
 	@sudo rm -rf packages/*/tmp
 	@rm -rf artifacts

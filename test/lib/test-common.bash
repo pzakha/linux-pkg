@@ -13,13 +13,17 @@ export BASE_GIT_URL="https://localhost/git"
 export GIT_TERMINAL_PROMPT=0
 
 #
-# This function checks the contents of a deb artifact generated when building
-# target package and returns success if the specified file is present.
+# When a linux-pkg package is built, debs are produced and stored in the
+# package's 'archive' directory.
 #
-# Param 1: package name
-# Param 2: absolute path of file (must not contain white space)
+# This function checks the contents of a produced deb and returns success if
+# it contains the specified file. Note that there must only be one deb in the
+# archive directory of the package.
 #
-function check_file_in_package_deb() {
+# Param 1: Package name
+# Param 2: Absolute path of file (must not contain white space)
+#
+function check_package_for_file() {
 	local package="$1"
 	local file="$2"
 
@@ -76,11 +80,15 @@ function create_git_repo() {
 function destroy_git_repo() {
 	local repo="$1"
 
-	sudo rm -rf "$SRV_DIR/git/${repo}.git"
+	sudo rm -rf "DOCKER_GIT_DIR/${repo}.git"
 }
 
 function cleanup_git_repos() {
-	sudo rm -rf "$SRV_DIR"/git/*
+	sudo rm -rf "DOCKER_GIT_DIR"/*
+}
+
+function cleanup_test_packages() {
+	sudo rm -rf "$LINUX_PKG_ROOT"/packages/test--*
 }
 
 function deploy_package_fixture_default() {
