@@ -22,23 +22,25 @@ trap exit_hook EXIT
 LINUX_PKG_ROOT=$(readlink -f ..)
 export LINUX_PKG_ROOT
 
+# Add LINUX_PKG_ROOT to path so that we can call scripts directly
+export PATH="$PATH:$LINUX_PKG_ROOT"
+
 function exit_hook() {
 	local ret=$?
 
-	[[ -n "$_LINUX_PKG_DEBUG" ]] || cleanup
+	if [[ -z "$STOP_ON_FAILURE" ]]; then
+		cleanup
+	else
+		echo "Not running cleanup because STOP_ON_FAILURE is set"
+	fi
 
 	return "$ret"
 }
 
 function cleanup() {
-	local ret=$?
-
 	docker/cleanup.sh
 	sudo rm -f /etc/apt/sources.list.d/linux-pkg.list
 	sudo rm -rf tmp ../packages/test--*
-	echo "Cleanup completed"
-
-	return "$ret"
 }
 
 cleanup
@@ -56,3 +58,5 @@ else
 fi
 
 trap - EXIT
+
+cleanup

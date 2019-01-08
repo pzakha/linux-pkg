@@ -23,7 +23,9 @@ docker run -d -p 443:443 --mount src="$(pwd)/tmp/srv",target=/srv,type=bind \
 	--name linux-pkg-nginx-img linux-pkg-nginx
 
 # Check that the container is healthy
-# TODO: make this more reliable
+# Note that this check is not perfect. It will only trigger if the container
+# fails within one second of its start. In practice it was sufficient for
+# catching most issues with the ngingx configuration.
 sleep 1
 if [[ $(docker inspect --format '{{.State.Running}}' \
 	linux-pkg-nginx-img) != true ]]; then
