@@ -34,7 +34,7 @@ function usage() {
 
 logmust cd "$TOP"
 
-logmust make clean
+logmust make clean-build
 logmust mkdir artifacts
 
 #
@@ -78,10 +78,10 @@ logmust pushd metapackage
 export METAPACKAGE_VERSION="1.0.0-$DEFAULT_REVISION"
 logmust make deb
 logmust popd
-logmust mv metapackage/artifacts/* artifacts/
+logmust cp metapackage/artifacts/* artifacts/
 
 for pkg in "${PACKAGES[@]}"; do
-	logmust mv "packages/$pkg/tmp/artifacts"/* artifacts/
+	logmust cp "packages/$pkg/tmp/artifacts"/* artifacts/
 done
 logmust cp metapackage/etc/delphix-extra-build-info artifacts/build-info
 

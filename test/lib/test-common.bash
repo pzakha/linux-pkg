@@ -3,6 +3,9 @@
 TEST_ROOT="$LINUX_PKG_ROOT/test"
 TEST_TMP="$TEST_ROOT/tmp"
 FIXTURES_DIR="$TEST_ROOT/fixtures"
+# shellcheck disable=SC2034
+TMP_PKG_LISTS="$TEST_TMP/pkg-lists"
+
 # Test git repositories should be copied to this directory. When setting up
 # a test repository, this directory can be used to clone the repository from.
 DOCKER_GIT_DIR="$TEST_ROOT/docker/tmp/srv/git"
@@ -32,6 +35,97 @@ function teardown() {
 
 	cleanup_git_repos
 	cleanup_test_packages
+}
+
+#
+# Can be called after building a linux-pkg package with buildpkg.
+# This returns the path of the deb produced by the build.
+# Function will fail if more than one deb is produced.
+#
+function get_package_deb() {
+	local package="$1"
+
+	local artifacts="$LINUX_PKG_ROOT/packages/$package/tmp/artifacts"
+
+	# Check that this package was built
+	[[ -d "$artifacts" ]]
+
+	shopt -s failglob
+	local debs=("$artifacts"/*.deb)
+	shopt -u failglob
+
+	# Check that there is only one deb
+	[[ ${#debs[@]} -gt 0 ]]
+	[[ ${#debs[@]} -eq 1 ]]
+
+	echo "${debs[0]}"
+}
+
+#
+# Can be called after running buildall.
+# For a given Debian package, this returns its path in the artifacts directory.
+# This function fails if several debs match the name provided.
+#
+function deb_path_in_artifacts() {
+	local deb_name="$1"
+
+	shopt -s failglob
+	local debs=("$LINUX_PKG_ROOT/artifacts/$deb_name"*.deb)
+	shopt -u failglob
+
+	[[ ${#debs[@]} -eq 1 ]]
+
+	echo "${debs[1]}"
+}
+
+function check_file_in_deb() {
+	local deb_path="$1"
+	local file="$2"
+
+	#
+	# dpkg-deb -c prints contents of archive in tar format.
+	# The last argument is the absolute file path with root as './'.
+	# Note that this check will fail if there is whitespace in $file.
+	#
+	set -o pipefail
+	dpkg-deb -c "$deb_path" | awk '{print $NF}' | grep -qx ".$file"
+	set +o pipefail
+}
+
+function check_file_not_in_deb() {
+	local deb_path="$1"
+	local file="$2"
+
+	#
+	# dpkg-deb -c prints contents of archive in tar format.
+	# The last argument is the absolute file path with root as './'.
+	# Note that this check will fail if there is whitespace in $file.
+	#
+	set -o pipefail
+	dpkg-deb -c "$deb_path" | awk '{print $NF}' | grep -vqx ".$file"
+	set +o pipefail
+}
+
+function get_deb_full_version() {
+	local deb_path="$1"
+
+	set -o pipefail
+	dpkg-deb -I "$deb_path" | awk '/^ Version:/{ print $2 }'
+	set +o pipefail
+}
+
+function check_deb_version() {
+	local deb_path="$1"
+	local version="$2"
+
+	[[ $(get_deb_full_version "$deb_path") == "$version"-* ]]
+}
+
+function check_deb_revision() {
+	local deb_path="$1"
+	local revision="$2"
+
+	[[ $(get_deb_full_version "$deb_path") == *-"$revision" ]]
 }
 
 #
@@ -136,8 +230,8 @@ function deploy_package_fixture() {
 
 	mkdir "$LINUX_PKG_ROOT/packages/$package"
 
-	deploy_package_config "$package" config.sh
-	deploy_package_git_repo "$package" repo "$package"
+	deploy_package_config "$package"
+	deploy_package_git_repo "$package"
 }
 
 #
@@ -146,7 +240,7 @@ function deploy_package_fixture() {
 #
 function deploy_package_config() {
 	local package="$1"
-	local config_file="$2"
+	local config_file="${2:-config.sh}"
 
 	local pkg_dir="$FIXTURES_DIR/packages/$package"
 	[[ -f "$pkg_dir/$config_file" ]]
@@ -164,8 +258,8 @@ function deploy_package_config() {
 #
 function deploy_package_git_repo() {
 	local package="$1"
-	local repo_dir="$2"
-	local repo_name="$3"
+	local repo_dir="${2:-repo}"
+	local repo_name="${3:-$package}"
 
 	local pkg_dir="$FIXTURES_DIR/packages/$package"
 	[[ -d "$pkg_dir" ]]
@@ -184,4 +278,20 @@ function deploy_package_git_repo() {
 	popd
 
 	sudo rm -rf "$TEST_TMP/repo"
+}
+
+function check_artifact_present() {
+	local deb_name="$1"
+	test -f "$LINUX_PKG_ROOT/artifacts/$deb_name"*.deb
+}
+
+function set_var_in_config() {
+	local package="$1"
+	local var="$2"
+	local value="$3"
+
+	[[ -f "$LINUX_PKG_ROOT/packages/$package/config.sh" ]]
+
+	sed -i "/$var/c\\$var=$value" \
+		"$LINUX_PKG_ROOT/packages/$package/config.sh"
 }

@@ -14,13 +14,13 @@
 # limitations under the License.
 #
 
-Source: test--simple
+Source: test--beta
 Section: misc
 Priority: optional
 Maintainer: Linux-pkg <eng@example.com>
 Build-Depends: debhelper (>= 10)
 Standards-Version: 4.1.2
 
-Package: test-simple-package
+Package: test-beta-package
 Architecture: any
 Description: Test package

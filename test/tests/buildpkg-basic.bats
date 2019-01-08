@@ -4,8 +4,9 @@ load ../lib/test-common
 
 @test "buildpkg: build simple package" {
 	deploy_package_fixture test--simple
+	echo ">> buildpkg"
 	buildpkg.sh test--simple
-	check_package_file_present test--simple /etc/dummy.txt
+	check_file_in_deb $(get_package_deb test--simple) /etc/dummy.txt
 }
 
 @test "buildpkg: git branch" {
@@ -39,36 +40,31 @@ load ../lib/test-common
 
 	# First build the package for the default branch and check that
 	# /etc/branch1 is not there as a sanity check.
-	echo ""
 	echo ">> Building using defaults"
 	buildpkg.sh test--simple
-	check_package_file_absent test--simple /etc/branch1
+	check_file_not_in_deb $(get_package_deb test--simple) /etc/branch1
 
 	# Set DEFAULT_PACKAGE_GIT_BRANCH=branch1 in config.sh, rebuild the
 	# package and check that /etc/branch1 is there.
-	echo ""
 	echo ">> Building when setting DEFAULT_PACKAGE_GIT_BRANCH"
-	sed -i '/DEFAULT_PACKAGE_GIT_BRANCH/c\DEFAULT_PACKAGE_GIT_BRANCH=branch1' \
-		"$LINUX_PKG_ROOT/packages/test--simple/config.sh"
+	set_var_in_config test--simple DEFAULT_PACKAGE_GIT_BRANCH branch1
 	buildpkg.sh test--simple
-	check_package_file_present test--simple /etc/branch1
+	check_file_in_deb $(get_package_deb test--simple) /etc/branch1
 
 	# Now test with "-b branch2".
-	echo ""
 	echo ">> Building when passing -b"
 	buildpkg.sh -b branch2 test--simple
-	check_package_file_present test--simple /etc/branch2
-	check_package_file_absent test--simple /etc/branch1
+	check_file_in_deb $(get_package_deb test--simple) /etc/branch2
+	check_file_not_in_deb $(get_package_deb test--simple) /etc/branch1
 
 	# Finally test setting git branch with the package-specific environment
 	# variable.
-	echo ""
 	echo ">> Building when setting TEST__SIMPLE_GIT_BRANCH"
 	export TEST__SIMPLE_GIT_BRANCH=branch3
 	buildpkg.sh test--simple
-	check_package_file_present test--simple /etc/branch3
-	check_package_file_absent test--simple /etc/branch2
-	check_package_file_absent test--simple /etc/branch1
+	check_file_in_deb $(get_package_deb test--simple) /etc/branch3
+	check_file_not_in_deb $(get_package_deb test--simple) /etc/branch2
+	check_file_not_in_deb $(get_package_deb test--simple) /etc/branch1
 }
 
 @test "buildpkg: git url" {
@@ -103,30 +99,20 @@ load ../lib/test-common
 	# First build the package using the DEFAULT_PACKAGE_GIT_BRANCH value
 	# that is currently in config.sh and check that /etc/simple-alt1 is
 	# not there.
-	echo ""
 	echo ">> Building using defaults"
 	buildpkg.sh test--simple
-	check_package_file_absent test--simple /etc/simple-alt1
+	check_file_not_in_deb $(get_package_deb test--simple) /etc/simple-alt1
 
 	# Now test "-g ..simple-alt1.git".
-	echo ""
 	echo ">> Building when passing -g"
 	buildpkg.sh -g "$BASE_GIT_URL/simple-alt1.git" test--simple
-	check_package_file_present test--simple /etc/simple-alt1
+	check_file_in_deb $(get_package_deb test--simple) /etc/simple-alt1
 
 	# Finally test setting git url with the package-specific environment
 	# variable.
-	echo ""
 	echo ">> Building when setting TEST__SIMPLE_GIT_URL"
 	export TEST__SIMPLE_GIT_URL="$BASE_GIT_URL/simple-alt2.git"
 	buildpkg.sh test--simple
-	check_package_file_present test--simple /etc/simple-alt2
-	check_package_file_absent test--simple /etc/simple-alt1
-}
-
-@test "buildall: sanity test" {
-	# Override the default package-lists defined in linux-pkg
-	export _PACKAGE_LISTS_DIR="$FIXTURES_DIR/pkg-lists/list1"
-
-	buildall.sh
+	check_file_in_deb $(get_package_deb test--simple) /etc/simple-alt2
+	check_file_not_in_deb $(get_package_deb test--simple) /etc/simple-alt1
 }

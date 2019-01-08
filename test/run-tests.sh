@@ -30,10 +30,12 @@ function exit_hook() {
 
 	if [[ -z "$STOP_ON_FAILURE" ]]; then
 		cleanup
+		echo "Hint: to debug test failure, set STOP_ON_FAILURE=1"
 	else
 		echo "Not running cleanup because STOP_ON_FAILURE is set"
 	fi
 
+	echo "Tests took $SECONDS seconds"
 	return "$ret"
 }
 
@@ -60,3 +62,4 @@ fi
 trap - EXIT
 
 cleanup
+echo "Tests took $SECONDS seconds"
