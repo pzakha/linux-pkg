@@ -3,6 +3,8 @@
 TEST_ROOT="$LINUX_PKG_ROOT/test"
 TEST_TMP="$TEST_ROOT/tmp"
 FIXTURES_DIR="$TEST_ROOT/fixtures"
+TMP_PKG_LISTS="$TEST_TMP/pkg-lists"
+
 # Test git repositories should be copied to this directory. When setting up
 # a test repository, this directory can be used to clone the repository from.
 DOCKER_GIT_DIR="$TEST_ROOT/docker/tmp/srv/git"

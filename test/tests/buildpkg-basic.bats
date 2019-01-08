@@ -123,10 +123,3 @@ load ../lib/test-common
 	check_package_file_present test--simple /etc/simple-alt2
 	check_package_file_absent test--simple /etc/simple-alt1
 }
-
-@test "buildall: sanity test" {
-	# Override the default package-lists defined in linux-pkg
-	export _PACKAGE_LISTS_DIR="$FIXTURES_DIR/pkg-lists/list1"
-
-	buildall.sh
-}

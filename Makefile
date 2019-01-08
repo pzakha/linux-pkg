@@ -35,15 +35,21 @@ setup:
 test: clean setup check
 	test/run-tests.sh
 
-clean:
+clean-test:
+	echo "Cleaning test artifacts"
 	@test/docker/cleanup.sh
 	@sudo rm -rf test/tmp
 	@sudo rm -rf packages/test--*
+
+clean-build:
+	echo "Cleaning build artifacts"
 	@sudo rm -rf packages/*/tmp
 	@rm -rf artifacts
 	@(cd metapackage && make clean)
 	@rm -f *.buildinfo *.changes *.deb
 	@rm -rf update-status
+
+clean: clean-test clean-build
 
 shellcheck:
 	shellcheck --exclude=SC1090,SC1091 \

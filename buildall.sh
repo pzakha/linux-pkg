@@ -34,7 +34,7 @@ function usage() {
 
 logmust cd "$TOP"
 
-logmust make clean
+logmust make clean-build
 logmust mkdir artifacts
 
 #
