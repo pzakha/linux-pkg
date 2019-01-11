@@ -1,5 +1,9 @@
 #!/usr/bin/env bats
 
+#
+# Testing functionality of buildall.sh
+#
+
 load ../lib/test-common
 
 function setup_buildall_pkg_lists() {
@@ -166,6 +170,6 @@ function setup_buildall_pkg_lists() {
 	# revert config for test--beta
 	deploy_package_config test--beta
 
-	echo ">> Sanity test that build still works"
+	echo ">> Sanity test that buildall still works"
 	buildall.sh
 }

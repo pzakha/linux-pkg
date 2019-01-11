@@ -1,5 +1,9 @@
 #!/usr/bin/env bats
 
+#
+# Testing basic functionality of buildpkg.sh
+#
+
 load ../lib/test-common
 
 @test "buildpkg: build simple package" {
