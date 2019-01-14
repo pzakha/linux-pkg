@@ -1,0 +1,5 @@
+test-charlie-src (5.0-1ubuntu1) bionic; urgency=medium
+
+  * Initial release.
+
+ -- Pavel Zakharov <pzakha@example.com>  Fri, 11 Jan 2019 20:56:06 +0000
