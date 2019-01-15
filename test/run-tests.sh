@@ -40,9 +40,7 @@ function exit_hook() {
 }
 
 function cleanup() {
-	docker/cleanup.sh
-	sudo rm -f /etc/apt/sources.list.d/linux-pkg.list
-	sudo rm -rf tmp ../packages/test--*
+	(cd "$LINUX_PKG_ROOT" && make clean-test)
 }
 
 cleanup

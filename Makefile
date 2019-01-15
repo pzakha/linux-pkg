@@ -36,10 +36,11 @@ test: clean setup check
 	test/run-tests.sh
 
 clean-test:
-	echo "Cleaning test artifacts"
+	@echo "Cleaning test artifacts"
 	@test/docker/cleanup.sh
 	@sudo rm -rf test/tmp
 	@sudo rm -rf packages/test--*
+	@sudo rm -f /etc/apt/sources.list.d/linux-pkg-test.list
 
 clean-build:
 	echo "Cleaning build artifacts"

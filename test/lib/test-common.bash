@@ -35,6 +35,7 @@ function teardown() {
 
 	cleanup_git_repos
 	cleanup_test_packages
+	pkg_archive_cleanup
 }
 
 #
@@ -221,7 +222,7 @@ function cleanup_test_packages() {
 #
 # Adds a new package definition to linux-pkg based on information stored
 # in DIR=fixtures/packages/<package>/:
-# - A directory under linux-pkg/packages/ is created for <package>
+# - A directory under linux-pkg/packages/ is created for <package>.
 # - The config.sh for <package> is copied from DIR/config.sh.
 # - A new git repository is created from files in DIR/repo/.
 #
@@ -232,6 +233,58 @@ function deploy_package_fixture() {
 
 	deploy_package_config "$package"
 	deploy_package_git_repo "$package"
+}
+
+#
+# Similar to deploy_package_fixture(), with the following differences:
+#  - Git repository is created from files in DIR/upstream instead of DIR/repo.
+#  - An additional branch that mirrors master is created in the repo:
+#    upstreams/master.
+#  - A source package is created from the contents of DIR/upstream and
+#    added to an aptly repository which is made available to apt.
+#  - The source package is extracted in $TEST_DIR/src/repo. It can be modified
+#    and then updated by calling:
+#      1. src_pkg_update_version(<version>)
+#      2. src_pkg_build_and_deploy()
+#      3. pkg_archive_publish()
+#
+function deploy_package_fixture_with_src_pkg_upstream() {
+	local package="$1"
+
+	mkdir "$LINUX_PKG_ROOT/packages/$package"
+
+	deploy_package_config "$package"
+	deploy_package_git_repo "$package" upstream "$package" true
+
+	# Create source package and publish it
+	src_pkg_copy_fixture "$package"
+	pkg_archive_create
+	src_pkg_build_and_deploy
+	pkg_archive_publish
+}
+
+#
+# Similar to deploy_package_fixture(), with the following differences:
+#  - Git repository is created from files in DIR/upstream instead of DIR/repo.
+#  - An additional branch, upstreams/master, is created in the repo, mirroring
+#    master.
+#  - A copy of the git repo is created, named <upstream_git_repo>, so it can be
+#    updated independently to simulate updates to the "upstream" repository.
+#
+function deploy_package_fixture_with_git_upstream() {
+	local package="$1"
+	local upstream_git_repo="$2"
+
+	[[ -n "$upstream_git_repo" ]]
+
+	mkdir "$LINUX_PKG_ROOT/packages/$package"
+
+	deploy_package_config "$package"
+	deploy_package_git_repo "$package" upstream "$package" true
+
+	# The upstream git repo is exactly the same as our repo initially
+	sudo cp -r "$DOCKER_GIT_DIR/${package}.git" \
+		"$DOCKER_GIT_DIR/${upstream_git_repo}.git"
 }
 
 #
@@ -260,10 +313,12 @@ function deploy_package_git_repo() {
 	local package="$1"
 	local repo_dir="${2:-repo}"
 	local repo_name="${3:-$package}"
+	local create_upstream_branch="${4:-false}"
 
 	local pkg_dir="$FIXTURES_DIR/packages/$package"
 	[[ -d "$pkg_dir" ]]
 	[[ -d "$pkg_dir/$repo_dir" ]]
+	[[ -n "$repo_name" ]]
 
 	create_git_repo "$repo_name"
 	sudo rm -rf "$TEST_TMP/repo"
@@ -275,11 +330,17 @@ function deploy_package_git_repo() {
 	git add -f .
 	git commit -m 'initial commit'
 	sudo git push origin HEAD:master
+	if $create_upstream_branch; then
+		sudo git push origin HEAD:upstreams/master
+	fi
 	popd
 
 	sudo rm -rf "$TEST_TMP/repo"
 }
 
+#
+# Check that deb <deb_name> was created as an artifact of buildall.sh.
+#
 function check_artifact_present() {
 	local deb_name="$1"
 	test -f "$LINUX_PKG_ROOT/artifacts/$deb_name"*.deb
@@ -294,4 +355,66 @@ function set_var_in_config() {
 
 	sed -i "/$var/c\\$var=$value" \
 		"$LINUX_PKG_ROOT/packages/$package/config.sh"
+}
+
+function src_pkg_copy_fixture() {
+	local package="$1"
+
+	[[ -d "$FIXTURES_DIR/packages/$package" ]]
+
+	rm -rf "$TEST_TMP/src"
+	mkdir "$TEST_TMP/src"
+	cp -r "$FIXTURES_DIR/packages/$package/upstream" "$TEST_TMP/src/repo"
+}
+
+function src_pkg_update_version() {
+	local full_version="$1"
+
+	pushd "$TEST_TMP/src/repo"
+	dch -v "$full_version" "Automatically generated entry."
+	popd
+}
+
+function src_pkg_build_and_deploy() {
+	pushd "$TEST_TMP/src/repo"
+	dpkg-buildpackage -us -uc
+	popd
+	pkg_archive_add "$TEST_TMP/src"
+}
+
+function pkg_archive_create() {
+	rm -rf "$TEST_TMP/archive"
+	mkdir "$TEST_TMP/archive"
+
+	local conf="$TEST_TMP/aptly.config"
+	cat >"$conf" <<-EOF
+		{
+		    "rootDir": "$TEST_TMP/archive"
+		}
+	EOF
+	aptly -config "$conf" repo create \
+		-distribution=bionic -component=main linux-pkg-archive
+}
+
+function pkg_archive_add() {
+	local pkg_dir="$1"
+
+	local conf="$TEST_TMP/aptly.config"
+	aptly -config "$conf" repo add linux-pkg-archive "$pkg_dir"
+}
+
+function pkg_archive_publish() {
+	local conf="$TEST_TMP/aptly.config"
+	aptly -config "$conf" publish repo -skip-signing linux-pkg-archive
+
+	echo "deb-src [trusted=yes] file://$TEST_TMP/archive/public bionic main" |
+		sudo tee /etc/apt/sources.list.d/linux-pkg-test.list
+
+	sudo apt-get update
+}
+
+function pkg_archive_cleanup() {
+	sudo rm -f /etc/apt/sources.list.d/linux-pkg-test.list
+	rm -rf "$TEST_TMP/archive"
+	rm -f "$TEST_TMP/aptly.conf"
 }
