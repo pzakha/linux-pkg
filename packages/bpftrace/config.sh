@@ -28,43 +28,20 @@ function prepare() {
 		logmust "$TOP/buildpkg.sh" bcc
 	fi
 
-	#
-	# Due to a bug in Ubuntu's version of Clang we need to fetch the packages
-	# from the official llvm PPA.
-	# See https://github.com/iovisor/bpftrace/issues/76.
-	#
-	logmust bash -c "wget -q -O - https://apt.llvm.org/llvm-snapshot.gpg.key |
-		sudo apt-key add -"
-
-	cat >/tmp/bpftrace-sources.list <<-EOF
-		# from https://apt.llvm.org/:
-		deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic main
-		deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic main
-		# 5.0
-		deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-5.0 main
-		deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-5.0 main
-	EOF
-
-	logmust sudo mv /tmp/bpftrace-sources.list /etc/apt/sources.list.d/
-	logmust sudo apt-get update
-
 	logmust install_pkgs \
 		bison \
 		cmake \
 		flex \
 		g++ \
+		git \
 		libelf-dev \
 		zlib1g-dev \
 		libfl-dev \
-		clang-5.0 \
-		libclang-5.0-dev \
-		libclang-common-5.0-dev \
-		libclang1-5.0 \
-		libllvm5.0 \
-		llvm-5.0 \
-		llvm-5.0-dev \
-		llvm-5.0-runtime \
-		systemtap-sdt-dev
+		systemtap-sdt-dev \
+		llvm-7-dev \
+		llvm-7-runtime \
+		libclang-7-dev \
+		clang-7
 }
 
 function build() {
