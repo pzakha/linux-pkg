@@ -24,7 +24,16 @@ function fetch() {
 
 	local url="http://artifactory.delphix.com/artifactory"
 
-	logmust wget -nv "$url/linux-pkg/td-agent/$package" -O "$package"
+	if [[ "$PACKAGE_GIT_URL" == "none" ]]; then
+		logmust wget -nv "$url/linux-pkg/td-agent/$package" \
+			-O "$package"
+	elif [[ "$PACKAGE_GIT_URL" == s3://*td-agent*deb ]]; then
+		echo "Interpreting GIT_URL provided as S3 URL for package."
+		logmust aws s3 cp --only-show-errors "$PACKAGE_GIT_URL" .
+	else
+		die "Invalid URL provided, please provide s3 link to deb or" \
+			"leave unset"
+	fi
 }
 
 function build() {
