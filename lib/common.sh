@@ -155,7 +155,7 @@ function check_env() {
 
 function check_git_ref() {
 	local ref
-	for ref in "$@"; do
+	for ref in $@; do
 		if ! git show-ref -q "$ref"; then
 			die "git ref '$ref' not found"
 		fi
