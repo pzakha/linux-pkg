@@ -13,3 +13,8 @@ jobs:
       - uses: actions/checkout@v1
       - run: sudo ./.github/scripts/install-shfmt.sh
       - run: make shfmtcheck
+  verify-query-packages:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v1
+      - run: sudo ./.github/scripts/verify-query-packages.sh
