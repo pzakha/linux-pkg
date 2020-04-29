@@ -16,7 +16,7 @@
 #
 # shellcheck disable=SC2034
 
-DEFAULT_PACKAGE_GIT_URL="https://github.com/delphix/python-rtslib-fb.git"
+DEFAULT_PACKAGE_GIT_URL="https://github.com/pzakha/python-rtslib-fb.git"
 # Note: we get the package version programatically in build()
 
 UPSTREAM_SOURCE_PACKAGE=python-rtslib-fb
