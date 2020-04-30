@@ -19,7 +19,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")" || exit 1
 TOP="$PWD"
 source "$TOP/lib/common.sh"
 
-ALL_OUTPUT_FIELDS=(name git-url dependencies)
+ALL_OUTPUT_FIELDS=(name git-url dependencies can-update)
 
 function usage() {
 	local output_fields="${ALL_OUTPUT_FIELDS[*]}"
@@ -50,19 +50,43 @@ function usage() {
 function print_package() {
 	local pkgname="$1"
 	local outarray=()
+	local deps_array=()
+	#
+	# Run this in a sub-shell so that functions and variables sourced from
+	# load_package_config() are reset each time we load a new package.
+	#
 	(
 		local field
+		local dep
 		load_package_config "$pkgname" >/dev/null
 		for field in "${ACTIVE_OUTPUT_FIELDS[@]}"; do
 			case "$field" in
 			name) outarray+=("$pkgname") ;;
 			git-url) outarray+=("${DEFAULT_PACKAGE_GIT_URL:-none}") ;;
-			dependencies) outarray+=(none) ;;
+			dependencies)
+				for dep in $PACKAGE_DEPENDENCIES; do
+					check_package_exists "$dep"
+					deps_array+=("$dep")
+				done
+				if [[ ${#deps_array[@]} -eq 0 ]]; then
+					outarray+=(none)
+				else
+					# comma-separated list of dependencies
+					outarray+=("$(
+						IFS=,
+						echo "${deps_array[*]}"
+					)")
+				fi
+				;;
+			can-update)
+				type -t "update_upstream" >/dev/null &&
+					outarray+=(true) || outarray+=(false)
+				;;
 			esac
 		done
 		IFS=$'\t'
 		echo "${outarray[*]}"
-	)
+	) || die "Failed to print info for package '$pkgname'"
 }
 
 function query_list() {

@@ -221,6 +221,7 @@ function reset_package_config_variables() {
 	DEFAULT_PACKAGE_GIT_BRANCH
 	DEFAULT_PACKAGE_GIT_VERSION
 	DEFAULT_PACKAGE_GIT_REVISION
+	PACKAGE_DEPENDENCIES
 	UPSTREAM_SOURCE_PACKAGE
 	UPSTREAM_GIT_URL
 	UPSTREAM_GIT_BRANCH
@@ -299,6 +300,25 @@ function load_package_config() {
 		[[ "$DEFAULT_PACKAGE_GIT_URL" == "none" ]] ||
 		die "$PACKAGE: DEFAULT_PACKAGE_GIT_URL must begin with " \
 			"https:// or be set to 'none'"
+
+	local dependency
+	local deps_array=()
+	for dependency in $PACKAGE_DEPENDENCIES; do
+		#
+		# Check for special value @linux-kernel which resolves to
+		# all flavors of linux kernel packages.
+		#
+		if [[ $dependency == '@linux-kernel' ]]; then
+			#
+			# TODO: resolve dependencies to linux kernel packages here.
+			#
+			continue
+		fi
+		(check_package_exists "$dependency") ||
+			die "Invalid package dependency '$dependency'"
+		deps_array+=("$dependency")
+	done
+	PACKAGE_DEPENDENCIES="${deps_array[*]}"
 
 	#
 	# Check for variables related to update_upstream() hook
