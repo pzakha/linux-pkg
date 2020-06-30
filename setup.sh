@@ -26,15 +26,13 @@ logmust determine_default_git_branch
 #
 configure_apt_sources() {
 	local package_mirror_url=''
-	if [[ -n "$DELPHIX_PACKAGE_MIRROR_MAIN" ]]; then
-		package_mirror_url="$DELPHIX_PACKAGE_MIRROR_MAIN"
+	if [[ -n "$DELPHIX_PACKAGE_MIRROR" ]]; then
+		package_mirror_url="$DELPHIX_PACKAGE_MIRROR"
 	else
 		local latest_url="http://linux-package-mirror.delphix.com/"
 		latest_url+="${DEFAULT_GIT_BRANCH}/latest/"
 		package_mirror_url=$(curl -LfSs -o /dev/null -w '%{url_effective}' \
 			"$latest_url" || die "Could not curl $latest_url")
-
-		package_mirror_url+="ubuntu"
 	fi
 
 	#
@@ -45,19 +43,29 @@ configure_apt_sources() {
 			die "Could not remove /etc/apt/sources.list.d"
 	)
 
+	local primary_url
+	local secondary_url
+	primary_url="${package_mirror_url}/ubuntu"
+	secondary_url="${package_mirror_url}/ppas"
+
 	sudo bash -c "cat <<-EOF >/etc/apt/sources.list
-deb ${package_mirror_url} ${UBUNTU_DISTRIBUTION} main restricted universe multiverse
-deb-src ${package_mirror_url} ${UBUNTU_DISTRIBUTION} main restricted universe multiverse
+		deb ${primary_url} ${UBUNTU_DISTRIBUTION} main restricted universe multiverse
+		deb-src ${primary_url} ${UBUNTU_DISTRIBUTION} main restricted universe multiverse
 
-deb ${package_mirror_url} ${UBUNTU_DISTRIBUTION}-updates main restricted universe multiverse
-deb-src ${package_mirror_url} ${UBUNTU_DISTRIBUTION}-updates main restricted universe multiverse
+		deb ${primary_url} ${UBUNTU_DISTRIBUTION}-updates main restricted universe multiverse
+		deb-src ${primary_url} ${UBUNTU_DISTRIBUTION}-updates main restricted universe multiverse
 
-deb ${package_mirror_url} ${UBUNTU_DISTRIBUTION}-security main restricted universe multiverse
-deb-src ${package_mirror_url} ${UBUNTU_DISTRIBUTION}-security main restricted universe multiverse
+		deb ${primary_url} ${UBUNTU_DISTRIBUTION}-security main restricted universe multiverse
+		deb-src ${primary_url} ${UBUNTU_DISTRIBUTION}-security main restricted universe multiverse
 
-deb ${package_mirror_url} ${UBUNTU_DISTRIBUTION}-backports main restricted universe multiverse
-deb-src ${package_mirror_url} ${UBUNTU_DISTRIBUTION}-backports main restricted universe multiverse
-EOF" || die "/etc/apt/sources.list could not be updated"
+		deb ${primary_url} ${UBUNTU_DISTRIBUTION}-backports main restricted universe multiverse
+		deb-src ${primary_url} ${UBUNTU_DISTRIBUTION}-backports main restricted universe multiverse
+
+		deb ${secondary_url} ${UBUNTU_DISTRIBUTION} main multiverse universe
+		deb ${secondary_url} ${UBUNTU_DISTRIBUTION}-updates main multiverse universe
+		EOF" || die "/etc/apt/sources.list could not be updated"
+
+	logmust sudo apt-key add "$TOP/resources/delphix-secondary-mirror.key"
 }
 
 logmust check_running_system
