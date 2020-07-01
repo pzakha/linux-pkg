@@ -22,6 +22,15 @@ export DEBIAN_FRONTEND=noninteractive
 # TODO: allow updating upstream for other branches than master
 export REPO_UPSTREAM_BRANCH="upstreams/master"
 
+export SUPPORTED_KERNEL_FLAVORS="generic aws"
+# FIXME: export SUPPORTED_KERNEL_FLAVORS="generic aws gcp azure oracle"
+
+#
+# Used when fetching artifacts for external dependencies. Can be overridden
+# for testing purposes.
+#
+export _BASE_S3_URL="s3://snapshot-de-images/builds/jenkins-ops/devops-gate/master"
+
 export UBUNTU_DISTRIBUTION="bionic"
 
 # shellcheck disable=SC2086
@@ -309,9 +318,8 @@ function load_package_config() {
 		# all flavors of linux kernel packages.
 		#
 		if [[ $dependency == '@linux-kernel' ]]; then
-			#
-			# TODO: resolve dependencies to linux kernel packages here.
-			#
+			logmust list_linux_kernel_packages
+			deps_array+=("${_RET_LIST[@]}")
 			continue
 		fi
 		(check_package_exists "$dependency") ||
@@ -521,6 +529,25 @@ function get_package_list_file() {
 	fi
 }
 
+function list_linux_kernel_packages() {
+	local kernel
+
+	_RET_LIST=()
+	if [[ -n "$TARGET_KERNEL_FLAVORS" ]]; then
+		for kernel in $TARGET_KERNEL_FLAVORS; do
+			(check_package_exists "linux-$kernel") ||
+				die "Invalid entry '$kernel' in TARGET_KERNEL_FLAVORS"
+			_RET_LIST+=("linux-$kernel")
+		done
+	else
+		for kernel in $SUPPORTED_KERNEL_FLAVORS; do
+			check_package_exists "linux-$kernel"
+			_RET_LIST+=("linux-$kernel")
+		done
+	fi
+	return 0
+}
+
 function install_shfmt() {
 	if [[ ! -f /usr/local/bin/shfmt ]]; then
 		logmust sudo wget -nv -O /usr/local/bin/shfmt \
@@ -561,6 +588,45 @@ function default_revision() {
 	# with the established conventions.
 	#
 	echo "delphix-$(date '+%Y.%m.%d.%H')"
+}
+
+function fetch_dependencies() {
+	logmust mkdir "$WORKDIR/dependencies"
+	logmust cd "$WORKDIR/dependencies"
+
+	if [[ -z "$PACKAGE_DEPENDENCIES" ]]; then
+		echo "Package has no linux-pkg dependencies to fetch."
+		return
+	fi
+
+	local base_url="$_BASE_S3_URL/linux-pkg/$DEFAULT_GIT_BRANCH/build-package"
+
+	local bucket="${_BASE_S3_URL#s3://}"
+	bucket=${bucket%%/*}
+
+	local dep s3urlvar s3url
+	for dep in $PACKAGE_DEPENDENCIES; do
+		echo "Fetching artifacts for dependency '$dep' ..."
+		get_package_prefix "$dep"
+		s3urlvar="${_RET}_S3_URL"
+		if [[ -n "${!s3urlvar}" ]]; then
+			s3url="${!s3urlvar}"
+			echo "S3 URL of package dependency '$dep' provided" \
+				"externally"
+			echo "$s3urlvar=$s3url"
+		else
+			s3url="$base_url/$dep"
+			(logmust aws s3 cp "$s3url/latest" .) ||
+				die "Artifacts for dependency '$dep' missing." \
+					"Dependency must be built first."
+			logmust cat latest
+			s3url="s3://$bucket/$(cat latest)"
+			logmust rm latest
+		fi
+		logmust mkdir "$dep"
+		logmust aws s3 cp --recursive "$s3url" "$dep/"
+		echo_bold "Fetched artifacts for '$dep' from $s3url"
+	done
 }
 
 #
@@ -787,7 +853,7 @@ function determine_target_kernels() {
 		return 0
 	fi
 
-	local supported_platforms="generic aws gcp azure oracle"
+	local supported_platforms="$SUPPORTED_KERNEL_FLAVORS"
 	local platform
 
 	if [[ -z "$TARGET_PLATFORMS" ]]; then

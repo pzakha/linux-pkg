@@ -201,6 +201,9 @@ fi
 logmust cd "$WORKDIR"
 stage fetch
 
+logmust cd "$WORKDIR"
+stage fetch_dependencies
+
 if $DO_UPDATE_PACKAGE; then
 	logmust cd "$WORKDIR"
 	logmust touch "$WORKDIR/updating-upstream"

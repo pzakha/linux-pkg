@@ -38,6 +38,7 @@ function usage() {
 		echo "    special values to the list command:"
 		echo "      all: displays all known packages"
 		echo "      appliance: displays all packages used by appliance"
+		echo "      linux-kernel: displays all linux kernel packages"
 		echo ""
 		echo "    -o  Comma delimited output fields."
 		echo "        Possible values: ${output_fields// /, }."
@@ -109,6 +110,8 @@ function query_list() {
 		dups=$(printf '%s\n' "${_RET_LIST[@]}" | sort | uniq -d)
 		[[ -z $dups ]] || die "Some apliance packages appear in both" \
 			"build/kernel.pkgs and build/userland.pkgs:\\n${dups}"
+	elif [[ $list == linux-kernel ]]; then
+		list_linux_kernel_packages >/dev/null
 	else
 		read_package_list "$TOP/package-lists/${list}" >/dev/null
 	fi
