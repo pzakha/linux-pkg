@@ -22,13 +22,13 @@ UPSTREAM_GIT_URL="https://git.launchpad.net/~canonical-kernel/ubuntu/+source/lin
 UPSTREAM_GIT_BRANCH="@PLACEHOLDER-WORKAROUND@"
 
 function prepare() {
-	kernel_prepare
+	logmust kernel_prepare
 }
 
 function build() {
-	kernel_build "gcp"
+	logmust kernel_build "gcp"
 }
 
 function update_upstream() {
-	kernel_update_upstream "gcp"
+	logmust kernel_update_upstream "gcp"
 }

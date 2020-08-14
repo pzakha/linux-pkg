@@ -22,7 +22,7 @@ UPSTREAM_GIT_URL="https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/
 UPSTREAM_GIT_BRANCH="@PLACEHOLDER-WORKAROUND@"
 
 function prepare() {
-	kernel_prepare
+	logmust kernel_prepare
 }
 
 function build() {
@@ -32,9 +32,9 @@ function build() {
 	#   builds both the generic and the low-latency kernel.
 	#   We don't care about the latter.
 	#
-	kernel_build "generic" "flavours=generic"
+	logmust kernel_build "generic" "flavours=generic"
 }
 
 function update_upstream() {
-	kernel_update_upstream "generic"
+	logmust kernel_update_upstream "generic"
 }
