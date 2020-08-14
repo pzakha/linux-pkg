@@ -32,9 +32,6 @@ function build() {
 	PACKAGE_VERSION=$(dpkg-parsechangelog | sed -rne 's,^Version: (.*),\1,p')
 
 	logmust dpkg_buildpackage_default
-
-	# Install libbcc which is required to build bpftrace
-	logmust install_pkgs "$WORKDIR/artifacts"/libbcc_*.deb
 }
 
 function update_upstream() {

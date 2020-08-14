@@ -22,6 +22,17 @@ export DEBIAN_FRONTEND=noninteractive
 # TODO: allow updating upstream for other branches than master
 export REPO_UPSTREAM_BRANCH="upstreams/master"
 
+export SUPPORTED_KERNEL_FLAVORS="generic aws gcp azure oracle"
+
+#
+# Used when fetching artifacts for external dependencies. Can be overridden
+# for testing purposes.
+#
+# export _BASE_S3_URL=${_BASE_S3_URL:-s3://snapshot-de-images/builds/jenkins-ops/devops-gate/master}
+
+# FIXME: revert to default
+export _BASE_S3_URL=${_BASE_S3_URL:-s3://snapshot-de-images/builds/jenkins-ops.pzakharov/devops-gate/master}
+
 export UBUNTU_DISTRIBUTION="bionic"
 
 # shellcheck disable=SC2086
@@ -221,6 +232,7 @@ function reset_package_config_variables() {
 	DEFAULT_PACKAGE_GIT_BRANCH
 	DEFAULT_PACKAGE_GIT_VERSION
 	DEFAULT_PACKAGE_GIT_REVISION
+	PACKAGE_DEPENDENCIES
 	UPSTREAM_SOURCE_PACKAGE
 	UPSTREAM_GIT_URL
 	UPSTREAM_GIT_BRANCH
@@ -299,6 +311,24 @@ function load_package_config() {
 		[[ "$DEFAULT_PACKAGE_GIT_URL" == "none" ]] ||
 		die "$PACKAGE: DEFAULT_PACKAGE_GIT_URL must begin with " \
 			"https:// or be set to 'none'"
+
+	local dependency
+	local deps_array=()
+	for dependency in $PACKAGE_DEPENDENCIES; do
+		#
+		# Check for special value @linux-kernel which resolves to
+		# all flavors of linux kernel packages.
+		#
+		if [[ $dependency == '@linux-kernel' ]]; then
+			logmust list_linux_kernel_packages
+			deps_array+=("${_RET_LIST[@]}")
+			continue
+		fi
+		(check_package_exists "$dependency") ||
+			die "Invalid package dependency '$dependency'"
+		deps_array+=("$dependency")
+	done
+	PACKAGE_DEPENDENCIES="${deps_array[*]}"
 
 	#
 	# Check for variables related to update_upstream() hook
@@ -501,6 +531,25 @@ function get_package_list_file() {
 	fi
 }
 
+function list_linux_kernel_packages() {
+	local kernel
+
+	_RET_LIST=()
+	if [[ -n "$TARGET_KERNEL_FLAVORS" ]]; then
+		for kernel in $TARGET_KERNEL_FLAVORS; do
+			(check_package_exists "linux-kernel-$kernel") ||
+				die "Invalid entry '$kernel' in TARGET_KERNEL_FLAVORS"
+			_RET_LIST+=("linux-kernel-$kernel")
+		done
+	else
+		for kernel in $SUPPORTED_KERNEL_FLAVORS; do
+			check_package_exists "linux-kernel-$kernel"
+			_RET_LIST+=("linux-kernel-$kernel")
+		done
+	fi
+	return 0
+}
+
 function install_shfmt() {
 	if [[ ! -f /usr/local/bin/shfmt ]]; then
 		logmust sudo wget -nv -O /usr/local/bin/shfmt \
@@ -512,17 +561,23 @@ function install_shfmt() {
 
 function install_kernel_headers() {
 	logmust determine_target_kernels
-	check_env KERNEL_VERSIONS
+	check_env KERNEL_VERSIONS DEPDIR
 
-	local kernel
-	local headers_pkgs=""
-
-	for kernel in $KERNEL_VERSIONS; do
-		headers_pkgs="$headers_pkgs linux-headers-$kernel"
+	logmust list_linux_kernel_packages
+	# Note: linux pacakges returned in _RET_LIST
+	local pkg
+	for pkg in "${_RET_LIST[@]}"; do
+		logmust install_pkgs "$DEPDIR/$pkg/"*-headers-*.deb
 	done
 
-	# shellcheck disable=SC2086
-	logmust install_pkgs $headers_pkgs
+	#
+	# Verify that headers are installed for all kernel versions
+	# stored in KERNEL_VERSIONS
+	#
+	local kernel
+	for kernel in $KERNEL_VERSIONS; do
+		logmust dpkg-query -l "linux-headers-$kernel" >/dev/null
+	done
 }
 
 function default_revision() {
@@ -541,6 +596,47 @@ function default_revision() {
 	# with the established conventions.
 	#
 	echo "delphix-$(date '+%Y.%m.%d.%H')"
+}
+
+function fetch_dependencies() {
+	export DEPDIR="$WORKDIR/dependencies"
+	logmust mkdir "$DEPDIR"
+	logmust cd "$DEPDIR"
+
+	if [[ -z "$PACKAGE_DEPENDENCIES" ]]; then
+		echo "Package has no linux-pkg dependencies to fetch."
+		return
+	fi
+
+	local base_url="$_BASE_S3_URL/linux-pkg/$DEFAULT_GIT_BRANCH/build-package"
+
+	local bucket="${_BASE_S3_URL#s3://}"
+	bucket=${bucket%%/*}
+
+	local dep s3urlvar s3url
+	for dep in $PACKAGE_DEPENDENCIES; do
+		echo "Fetching artifacts for dependency '$dep' ..."
+		get_package_prefix "$dep"
+		s3urlvar="${_RET}_S3_URL"
+		if [[ -n "${!s3urlvar}" ]]; then
+			s3url="${!s3urlvar}"
+			echo "S3 URL of package dependency '$dep' provided" \
+				"externally"
+			echo "$s3urlvar=$s3url"
+		else
+			s3url="$base_url/$dep/post-push"
+			(logmust aws s3 cp --only-show-errors "$s3url/latest" .) ||
+				die "Artifacts for dependency '$dep' missing." \
+					"Dependency must be built first."
+			logmust cat latest
+			s3url="s3://$bucket/$(cat latest)"
+			logmust rm latest
+		fi
+		logmust mkdir "$dep"
+		logmust aws s3 cp --only-show-errors --recursive "$s3url" "$dep/"
+		echo_bold "Fetched artifacts for '$dep' from $s3url"
+		PACKAGE_DEPENDENCIES_METADATA="${PACKAGE_DEPENDENCIES_METADATA}$dep: $s3url\\n"
+	done
 }
 
 #
@@ -665,6 +761,84 @@ function update_upstream_from_git() {
 	logmust cd "$WORKDIR"
 }
 
+function is_merge_needed() {
+	local repo_ref="refs/heads/repo-HEAD"
+	local upstream_ref="refs/heads/upstream-HEAD"
+
+	logmust pushd "$WORKDIR/repo"
+	check_git_ref "$upstream_ref" "$repo_ref"
+
+	if git merge-base --is-ancestor "$upstream_ref" "$repo_ref"; then
+		_RET=false
+	else
+		_RET=true
+	fi
+	logmust popd
+}
+
+function merge_with_upstream_default() {
+	local repo_ref="refs/heads/repo-HEAD"
+	local upstream_ref="refs/heads/upstream-HEAD"
+
+	logmust cd "$WORKDIR/repo"
+	check_git_ref "$upstream_ref" "$repo_ref"
+
+	logmust git checkout -q repo-HEAD
+
+	if git merge-base --is-ancestor "$upstream_ref" HEAD; then
+		echo "NOTE: $PACKAGE is already up-to-date with upstream."
+		return 0
+	fi
+
+	#
+	# Do a backup of the repo-HEAD branch so that it can be compared to the
+	# remote when time comes to do a push.
+	#
+	logmust git branch repo-HEAD-saved
+
+	echo "Running: git merge --no-edit --no-stat $upstream_ref"
+	if git merge --no-edit --no-stat "$upstream_ref"; then
+		echo "git merge succeeded"
+		logmust touch "$WORKDIR/repo-updated"
+	else
+		echo "git merge failed"
+		logmust git merge --abort
+		return 1
+	fi
+}
+
+function check_git_credentials_set() {
+	if [[ -z "$PUSH_GIT_USER" ]] || [[ -z "$PUSH_GIT_PASSWORD" ]]; then
+		if [[ -t 1 ]]; then
+			echo "Please enter git credentials to push to remote."
+			read -r -p "Username: " PUSH_GIT_USER
+			read -r -s -p "Password: " PUSH_GIT_PASSWORD
+		else
+			die "PUSH_GIT_USER and PUSH_GIT_PASSWORD must be set."
+		fi
+	fi
+}
+
+function push_to_remote() {
+	local local_ref="$1"
+	local remote_ref="$2"
+	local force="${3:-false}"
+
+	local flags=""
+	$force && flags="-f"
+
+	check_env DEFAULT_PACKAGE_GIT_URL PUSH_GIT_USER PUSH_GIT_PASSWORD
+	local git_url_with_creds="${DEFAULT_PACKAGE_GIT_URL/https:\/\//https:\/\/${PUSH_GIT_USER}:${PUSH_GIT_PASSWORD}@}"
+	local git_url_with_fake_creds="${DEFAULT_PACKAGE_GIT_URL/https:\/\//https:\/\/${PUSH_GIT_USER}:<redacted>@}"
+
+	logmust cd "$WORKDIR/repo"
+	check_git_ref "$local_ref"
+
+	echo "RUNNING: git push $flags $git_url_with_fake_creds $local_ref:$remote_ref"
+	git push $flags "$git_url_with_creds" "$local_ref:$remote_ref" ||
+		die "push failed"
+}
+
 #
 # Creates a new changelog entry for the package with the appropriate fields.
 # If no changelog file exists, source package name can be passed in first arg.
@@ -695,24 +869,10 @@ function dpkg_buildpackage_default() {
 }
 
 #
-# Store some metadata about what was this package built from. When running
-# buildlist.sh, build_info for all packages is ingested by the metapackage
-# and installed into /lib/delphix-buildinfo/<package-list>.info.
-#
-function store_git_info() {
-	logmust pushd "$WORKDIR/repo"
-	echo "Git hash: $(git rev-parse HEAD)" >"$WORKDIR/build_info" ||
-		die "storing git info failed"
-	echo "Git repo: $PACKAGE_GIT_URL" >>"$WORKDIR/build_info"
-	echo "Git branch: $PACKAGE_GIT_BRANCH" >>"$WORKDIR/build_info"
-	logmust popd
-}
-
-#
 # Returns the default (usually latest) kernel version for a given platform.
 # Result is placed into _RET.
 #
-function get_kernel_for_platform() {
+function get_kernel_for_platform_from_apt() {
 	local platform="$1"
 	local package
 
@@ -749,16 +909,48 @@ function get_kernel_for_platform() {
 	fi
 }
 
+function fetch_kernel_from_apt() {
+	local platform="$1"
+
+	local kernel
+	logmust get_kernel_for_platform_from_apt "$platform"
+	kernel="$_RET"
+
+	logmust cd "$WORKDIR/artifacts"
+	logmust apt-get download \
+		"linux-image-${kernel}" \
+		"linux-image-${kernel}-dbgsym" \
+		"linux-modules-${kernel}" \
+		"linux-headers-${kernel}" \
+		"linux-tools-${kernel}"
+
+	#
+	# Fetch direct dependencies of the downloaded debs. Some of those
+	# dependencies have a slightly different naming scheme than the other
+	# kernel packages.
+	#
+	local deb dep deps
+	for deb in *.deb; do
+		deps=$(dpkg-deb -f "$deb" Depends | tr -d ' ' | tr ',' ' ') ||
+			die "failed to get dependencies for $deb"
+		for dep in $deps; do
+			case "$dep" in
+			*-headers-* | *-tools-*)
+				logmust apt-get download "$dep"
+				;;
+			esac
+		done
+	done
+
+	echo "$kernel" >KERNEL_VERSION
+}
+
 #
 # Determine which kernel versions to build modules for and store
 # the value into KERNEL_VERSIONS, unless it is already set.
 #
-# We determine the target kernel versions based on the value passed for
-# TARGET_PLATFORMS. Here is a list of accepted values for TARGET_PLATFORMS:
-#  a) <empty>: to build for all supported platforms
-#  b) "aws gcp ...": to build for the default kernel version of those platforms.
-#  c) "4.15.0-1010-aws ...": to build for specific kernel versions
-#  d) mix of b) and c)
+# We determine the target kernel versions based on the kernel package
+# dependencies fetched through fetch_dependencies().
 #
 function determine_target_kernels() {
 	if [[ -n "$KERNEL_VERSIONS" ]]; then
@@ -767,30 +959,26 @@ function determine_target_kernels() {
 		return 0
 	fi
 
-	local supported_platforms="generic aws gcp azure oracle"
-	local platform
+	[[ -n "$DEPDIR" ]] || die "determine_target_kernels() can only be" \
+		"called after dependencies have been fetched."
 
-	if [[ -z "$TARGET_PLATFORMS" ]]; then
-		echo "TARGET_PLATFORMS not set, defaulting to: $supported_platforms"
-		TARGET_PLATFORMS="$supported_platforms"
-	fi
+	logmust list_linux_kernel_packages
+	# note: list of kernel packages returned in _RET_LIST
 
-	local kernel
-	for kernel in $TARGET_PLATFORMS; do
-		for platform in $supported_platforms; do
-			if [[ "$kernel" == "$platform" ]]; then
-				logmust get_kernel_for_platform "$platform"
-				kernel="$_RET"
-				break
-			fi
-		done
+	local pkg kernel
+	for pkg in "${_RET_LIST[@]}"; do
+		logmust test -d "$DEPDIR/$pkg"
 		#
-		# Check that the target kernel is valid
+		# When Linux kernel packages are built, they must store the
+		# kernel version into a file named 'KERNEL_VERSION'.
 		#
-		apt-cache show "linux-image-${kernel}" >/dev/null 2>&1 ||
-			die "Invalid target kernel '$kernel'"
-
+		(logmust test -f "$DEPDIR/$pkg/KERNEL_VERSION") ||
+			die "KERNEL_VERSION file missing from dependency '$pkg'"
+		kernel="$(cat "$DEPDIR/$pkg/KERNEL_VERSION")"
+		[[ -n "$kernel" ]] || die "invalid value '$kernel'" \
+			"in $DEPDIR/$pkg/KERNEL_VERSION"
 		KERNEL_VERSIONS="$KERNEL_VERSIONS $kernel"
+		KERNEL_VERSIONS_METADATA="${KERNEL_VERSIONS_METADATA}${pkg}: ${kernel}\\n"
 	done
 
 	echo "Kernel versions to use to build modules:"
@@ -806,4 +994,38 @@ function install_gcc8() {
 		/usr/bin/gcc-7 700 --slave /usr/bin/g++ g++ /usr/bin/g++-7
 	logmust sudo update-alternatives --install /usr/bin/gcc gcc \
 		/usr/bin/gcc-8 800 --slave /usr/bin/g++ g++ /usr/bin/g++-8
+}
+
+function store_git_info() {
+	logmust pushd "$WORKDIR/repo"
+	local git_hash
+	git_hash="$(git rev-parse HEAD)" || die "Failed retrieving git hash"
+	echo "$git_hash" >"$WORKDIR/artifacts/GIT_HASH"
+
+	cat <<-EOF >>"$WORKDIR/artifacts/BUILD_INFO"
+		Git hash: $git_hash
+		Git repo: $PACKAGE_GIT_URL
+		Git branch: $PACKAGE_GIT_BRANCH
+	EOF
+	logmust popd
+}
+
+function store_build_info() {
+	if [[ -d "$WORKDIR/repo/.git" ]]; then
+		logmust store_git_info
+	fi
+
+	if [[ -n $KERNEL_VERSIONS_METADATA ]]; then
+		echo -ne "$KERNEL_VERSIONS_METADATA" >"$WORKDIR/artifacts/KERNEL_VERSIONS" ||
+			die 'Failed to store kernel versions metadata'
+	fi
+
+	if [[ -n $PACKAGE_DEPENDENCIES_METADATA ]]; then
+		echo -ne "$PACKAGE_DEPENDENCIES_METADATA" >"$WORKDIR/artifacts/PACKAGE_DEPENDENCIES" ||
+			die 'Failed to store package dependencies metadata'
+	fi
+
+	if [[ -f "$TOP/PACKAGE_MIRROR_URL" ]]; then
+		logmust cp "$TOP/PACKAGE_MIRROR_URL" "$WORKDIR/artifacts/PACKAGE_MIRROR_URL"
+	fi
 }

@@ -17,11 +17,13 @@
 # shellcheck disable=SC2034
 
 DEFAULT_PACKAGE_GIT_URL="https://github.com/delphix/targetcli-fb.git"
+PACKAGE_DEPENDENCIES="python-rtslib-fb"
 # Note: we get the package version programatically in build()
 
 UPSTREAM_SOURCE_PACKAGE=targetcli-fb
 
 function prepare() {
+	logmust install_pkgs "$DEPDIR"/python-rtslib-fb/python3-rtslib-fb*.deb
 	logmust install_build_deps_from_control_file
 }
 

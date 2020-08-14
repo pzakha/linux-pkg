@@ -32,11 +32,6 @@ function build() {
 	fi
 
 	logmust dpkg_buildpackage_default
-
-	# java-package supporting adoptopenjdk needs to be installed to
-	# create jdk debian package from jdk tarball when building adoptopenjdk
-	# package
-	logmust install_pkgs "$WORKDIR/artifacts"/*.deb
 }
 
 function update_upstream() {

@@ -18,16 +18,13 @@
 
 DEFAULT_PACKAGE_GIT_URL="https://github.com/delphix/bpftrace.git"
 DEFAULT_PACKAGE_VERSION=1.0.0
+PACKAGE_DEPENDENCIES="bcc"
 
 UPSTREAM_GIT_URL="https://github.com/iovisor/bpftrace.git"
 UPSTREAM_GIT_BRANCH="master"
 
 function prepare() {
-	if ! dpkg-query --show libbcc >/dev/null 2>&1; then
-		echo_bold "libbcc not installed. Building package 'bcc' first."
-		logmust "$TOP/buildpkg.sh" bcc
-	fi
-
+	logmust install_pkgs "$DEPDIR"/bcc/libbcc_*.deb
 	logmust install_build_deps_from_control_file
 }
 

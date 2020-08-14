@@ -27,12 +27,8 @@ function fetch() {
 	logmust fetch_repo_from_git
 }
 
-function store_build_info() {
-	if [[ -d "$WORKDIR/repo/.git" ]]; then
-		logmust store_git_info
-	else
-		echo "No build info available" >"$WORKDIR/build_info"
-	fi
+function merge_with_upstream() {
+	logmust merge_with_upstream_default
 }
 
 #

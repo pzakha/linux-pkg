@@ -53,14 +53,6 @@ logmust mkdir artifacts
 #
 export DEFAULT_REVISION="${DEFAULT_REVISION:-$(default_revision)}"
 
-#
-# A list of target platform or versions to build modules for can be passed in
-# TARGET_PLATFORMS. Convert values like "aws" into actual kernel
-# versions and store them into KERNEL_VERSIONS.
-#
-logmust determine_target_kernels
-export KERNEL_VERSIONS
-
 build_flags=""
 if [[ "$CHECKSTYLE" == "true" ]]; then
 	build_flags="${build_flags} -c"

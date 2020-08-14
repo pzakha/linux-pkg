@@ -154,7 +154,6 @@ while getopts ':b:cg:hik:Mr:uv:' c; do
 	b) export PARAM_PACKAGE_GIT_BRANCH="$OPTARG" ;;
 	v) export PARAM_PACKAGE_VERSION="$OPTARG" ;;
 	r) export PARAM_PACKAGE_REVISION="$OPTARG" ;;
-	k) export TARGET_PLATFORMS="$OPTARG" ;;
 	c) do_checkstyle=true ;;
 	i) do_initialize=true ;;
 	u) DO_UPDATE_PACKAGE=true ;;
@@ -200,6 +199,9 @@ fi
 
 logmust cd "$WORKDIR"
 stage fetch
+
+logmust cd "$WORKDIR"
+stage fetch_dependencies
 
 if $DO_UPDATE_PACKAGE; then
 	logmust cd "$WORKDIR"
