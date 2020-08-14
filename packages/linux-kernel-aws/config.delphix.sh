@@ -15,12 +15,20 @@
 # limitations under the License.
 #
 
-linux_package_source="${LINUX_KERNEL_PACKAGE_SOURCE:-$DEFAULT_LINUX_KERNEL_PACKAGE_SOURCE}"
-case "$linux_package_source" in
-delphix | archive | prebuilt)
-	logmust source "${BASH_SOURCE%/*}/config.${linux_package_source}.sh"
-	;;
-default)
-	die "invalid linux-kernel package source '$linux_package_source'"
-	;;
-esac
+# shellcheck disable=SC2034
+DEFAULT_PACKAGE_GIT_URL="https://github.com/delphix/linux-kernel-aws.git"
+
+UPSTREAM_GIT_URL="https://git.launchpad.net/~canonical-kernel/ubuntu/+source/linux-aws/+git/bionic"
+UPSTREAM_GIT_BRANCH="@PLACEHOLDER-WORKAROUND@"
+
+function prepare() {
+	logmust kernel_prepare
+}
+
+function build() {
+	logmust kernel_build "aws"
+}
+
+function update_upstream() {
+	logmust kernel_update_upstream "aws"
+}
