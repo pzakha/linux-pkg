@@ -32,3 +32,7 @@ function build() {
 function update_upstream() {
 	logmust kernel_update_upstream "aws"
 }
+
+function merge_with_upstream() {
+	logmust kernel_merge_with_upstream
+}

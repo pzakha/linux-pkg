@@ -254,8 +254,55 @@ function kernel_update_upstream() {
 	local upstream_tag
 	upstream_tag=$(echo "${upstream_tag_info}" | awk -F / '{print $3}')
 	[[ -z "${upstream_tag}" ]] && die "could not extract upstream tag name from the tag info"
-	echo "note: upstream tag: ${upstream_tag}"
-	logmust git fetch upstream "${upstream_tag}"
+
+	logmust git fetch upstream "+refs/tags/${upstream_tag}:refs/tags/${upstream_tag}"
+
+	local upstream_tag_commit
+	upstream_tag_commit="$(git rev-parse "refs/tags/${upstream_tag}")" ||
+		die "couldn't get commit of tag ${upstream_tag}"
+	echo "note: upstream tag: ${upstream_tag}, commit ${upstream_tag_commit}"
+
+	#
+	# Check if the commit of the latest tag from upstream matches
+	# what we have cached in our repository at upstreams/<branch>,
+	# which we fetch to upstream-HEAD.
+	#
+	local local_upstream_commit
+	local_upstream_commit=$(git rev-parse upstream-HEAD)
+	[[ -z "${local_upstream_commit}" ]] && die "could not find upstream-HEAD's commit"
+	echo "note: upstreams/${DEFAULT_GIT_BRANCH} commit: ${local_upstream_commit}"
+
+	if [[ "${upstream_tag_commit}" == "${local_upstream_commit}" ]]; then
+		echo "NOTE: upstream for $PACKAGE is already up-to-date."
+	else
+		logmust git reset --hard "refs/tags/${upstream_tag}"
+		echo "NOTE: upstream updated to refs/tags/${upstream_tag}"
+
+		#
+		# Store name of upstream tag so that we can push it to our
+		# repository for reference purposes.
+		#
+		echo "refs/tags/${upstream_tag}" >"$WORKDIR/upstream-tag" ||
+			die "failed to write to $WORKDIR/upstream-tag"
+
+		logmust touch "$WORKDIR/upstream-updated"
+	fi
+
+	logmust cd "$WORKDIR"
+}
+
+function kernel_merge_with_upstream() {
+	local repo_ref="refs/heads/repo-HEAD"
+	local upstream_ref="refs/heads/upstream-HEAD"
+
+	logmust cd "$WORKDIR/repo"
+
+	check_git_ref "$upstream_ref" "$repo_ref"
+
+	if git merge-base --is-ancestor "$upstream_ref" "$repo_ref"; then
+		echo "NOTE: $PACKAGE is already up-to-date with upstream."
+		return 0
+	fi
 
 	#
 	# Ensure that there is a commit marking the start of
@@ -272,29 +319,18 @@ function kernel_update_upstream() {
 	[[ -z "${dlpx_patch_end}" ]] && die "could not find repo-HEAD's head commit"
 
 	#
-	# Compare that commit with the head commit of the
-	# upstream tag. If the commits are the same then
-	# there is nothing for us to do as we are using
-	# the most up-to-date tag as the base for our set
-	# of patches. On the other hand, if the commits
-	# differ then it means that the upstream has been
-	# updated, at which point we need to cherry-pick
-	# our patches on top of the new upstream.
+	# We rebase all the Delphix commits on top of the new upstream-HEAD
+	# by using git cherry-pick.
 	#
-	local upstream_head_commit
-	upstream_head_commit=$(git rev-parse upstream-HEAD)
-	[[ -z "${upstream_head_commit}" ]] && die "could not find upstream-HEAD's head commit"
 
-	if [[ "${current_ubuntu_commit}" == "${upstream_head_commit}" ]]; then
-		echo "NOTE: upstream for $PACKAGE is already up-to-date."
-	else
-		# shellcheck disable=SC2086
-		logmust git cherry-pick ${dlpx_patch_start}^..${dlpx_patch_end}
+	logmust git branch repo-HEAD-old repo-HEAD
+	logmust git branch -D repo-HEAD
+	logmust git checkout -q -b repo-HEAD upstream-HEAD
 
-		logmust touch "$WORKDIR/upstream-updated"
-	fi
+	# shellcheck disable=SC2086
+	logmust git cherry-pick ${dlpx_patch_start}^..${dlpx_patch_end}
 
-	logmust cd "$WORKDIR"
+	logmust touch "$WORKDIR/repo-updated"
 }
 
 function post_build_checks() {
