@@ -798,6 +798,7 @@ function is_merge_needed() {
 	check_git_ref "$upstream_ref" "$repo_ref"
 
 	if git merge-base --is-ancestor "$upstream_ref" "$repo_ref"; then
+		echo "Upstream is already merged into repo-HEAD"
 		_RET=false
 	else
 		_RET=true
