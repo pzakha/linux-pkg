@@ -645,9 +645,38 @@ function fetch_dependencies() {
 function fetch_repo_from_git() {
 	check_env PACKAGE_GIT_URL PACKAGE_GIT_BRANCH
 
+	#
+	# For local testing only, to avoid fetching the same repository
+	# every time: if _USE_GIT_CACHE is set to true, fetch the repository
+	# into a cached location, so subsequent fetches are much faster.
+	#
+	local git_cache_dir="$TOP/.gitcache/$PACKAGE"
+	if [[ "$_USE_GIT_CACHE" == true ]]; then
+		echo_bold "git cache enabled via _USE_GIT_CACHE"
+		if [[ ! -d "$git_cache_dir" ]]; then
+			logmust mkdir -p "$git_cache_dir"
+			logmust cd "$git_cache_dir"
+			logmust git init --bare
+			if $DO_UPDATE_PACKAGE; then
+				logmust git fetch --no-tags "$PACKAGE_GIT_URL" \
+					"+$PACKAGE_GIT_BRANCH:repo-HEAD"
+				logmust git fetch --no-tags "$PACKAGE_GIT_URL" \
+					"+$REPO_UPSTREAM_BRANCH:upstream-HEAD"
+			else
+				logmust git fetch --no-tags "$PACKAGE_GIT_URL" \
+					"+$PACKAGE_GIT_BRANCH:repo-HEAD" --depth=1
+			fi
+		fi
+	fi
+
 	logmust mkdir "$WORKDIR/repo"
 	logmust cd "$WORKDIR/repo"
 	logmust git init
+
+	if [[ "$_USE_GIT_CACHE" == true ]]; then
+		echo "$git_cache_dir/objects" \
+			>"$WORKDIR/repo/.git/objects/info/alternates"
+	fi
 
 	#
 	# If we are updating the package, we need to fetch both the
