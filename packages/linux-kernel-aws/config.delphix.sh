@@ -16,7 +16,7 @@
 #
 
 # shellcheck disable=SC2034
-DEFAULT_PACKAGE_GIT_URL="https://github.com/delphix/linux-kernel-aws.git"
+DEFAULT_PACKAGE_GIT_URL="https://github.com/pzakha/linux-kernel-aws.git"
 
 UPSTREAM_GIT_URL="https://git.launchpad.net/~canonical-kernel/ubuntu/+source/linux-aws/+git/bionic"
 UPSTREAM_GIT_BRANCH="@PLACEHOLDER-WORKAROUND@"
