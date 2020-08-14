@@ -191,7 +191,7 @@ function kernel_update_upstream() {
 	# out the latest upstream tag to sync with.
 	#
 	local kernel_version abinum
-	logmust get_kernel_for_platform "${platform}"
+	logmust get_kernel_for_platform_from_apt "${platform}"
 	kernel_version=$(echo "$_RET" | cut -d '-' -f 1)
 	abinum=$(echo "$_RET" | cut -d '-' -f 2)
 
