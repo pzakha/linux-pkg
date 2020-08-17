@@ -89,9 +89,17 @@ function kernel_build() {
 	# the end of the new one to maintain the mapping between
 	# Canonical's releases and our releases.
 	#
-	local canonical_abinum delphix_abinum
-	canonical_abinum=$(fakeroot debian/rules printenv | grep abinum | cut -d= -f2 | tr -d '[:space:]')
+	local canonical_abinum delphix_abinum kernel_release kernel_version
+	canonical_abinum=$(fakeroot debian/rules printenv | grep -E '^abinum ' | cut -d= -f2 | tr -d '[:space:]')
 	delphix_abinum="dlpx-$(date -u +"%Y%m%dt%H%M%S")-$(git rev-parse --short HEAD)-${canonical_abinum}"
+	kernel_release=$(fakeroot debian/rules printenv | grep -E '^release ' | cut -d= -f2 | tr -d '[:space:]')
+
+	#
+	# We record the kernel version into a file. This field is consumed
+	# by other kernel packages, such as zfs, during their build.
+	#
+	kernel_version="${kernel_release}-${delphix_abinum}"
+	echo "$kernel_version" >"$WORKDIR/artifacts/KERNEL_VERSION"
 
 	#
 	# skipdbg=false

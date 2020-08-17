@@ -35,7 +35,7 @@ export _BASE_S3_URL=${_BASE_S3_URL:-s3://snapshot-de-images/builds/jenkins-ops.p
 
 export UBUNTU_DISTRIBUTION="bionic"
 
-export DEFAULT_LINUX_KERNEL_PACKAGE_SOURCE="delphix"
+export DEFAULT_LINUX_KERNEL_PACKAGE_SOURCE="prebuilt"
 
 # shellcheck disable=SC2086
 function enable_colors() {
@@ -241,6 +241,8 @@ function reset_package_config_variables() {
 	WORKDIR
 	PKGDIR
 	PACKAGE_PREFIX
+	FORCE_PUSH_ON_UPDATE
+	SKIP_COPYRIGHTS_CHECK
 	"
 
 	for var in $vars; do
@@ -941,12 +943,12 @@ function get_kernel_for_platform_from_apt() {
 	fi
 }
 
-function fetch_kernel_from_apt() {
-	local platform="$1"
-
-	local kernel
-	logmust get_kernel_for_platform_from_apt "$platform"
-	kernel="$_RET"
+#
+# Provided a kernel version, fetch all necessary linux kernel packages
+# into WORKDIR/artifacts. Also store kernel version into KERNEL_VERSION.
+#
+function fetch_kernel_from_apt_for_version() {
+	local kernel="$1"
 
 	logmust cd "$WORKDIR/artifacts"
 	logmust apt-get download \
@@ -975,6 +977,40 @@ function fetch_kernel_from_apt() {
 	done
 
 	echo "$kernel" >KERNEL_VERSION
+}
+
+#
+# Find latest linux kernel available in apt for the given platform, and
+# download all the necessary linux-kernel packages.
+#
+function fetch_kernel_from_apt_for_platform() {
+	local platform="$1"
+
+	local kernel_version
+	logmust get_kernel_for_platform_from_apt "$platform"
+	kernel_version="$_RET"
+
+	logmust fetch_kernel_from_apt_for_version "$kernel_version"
+}
+
+#
+# Fetch linux kernel packages from apt for the given kernel version. Also
+# fetch the pre-built linux-modules package from artifactory. The pre-built
+# package should have the same name as the one downloaded from apt but
+# a higher revision number so that it will be picked over the default one
+# downloaded from apt during the build of the appliance.
+#
+function fetch_kernel_from_artifactory() {
+	local kernel_version="$1"
+	local artifactory_deb="$2"
+
+	logmust fetch_kernel_from_apt_for_version "$kernel_version"
+
+	local url="http://artifactory.delphix.com/artifactory"
+	url="$url/linux-pkg/linux-prebuilt/${artifactory_deb}"
+
+	logmust cd "$WORKDIR/artifacts"
+	logmust wget -nv "$url"
 }
 
 #

@@ -26,13 +26,13 @@ function usage() {
 	echo ""
 	echo "  Update the upstreams branch for the package and attempt to merge"
 	echo "  active branch with the upstream. If merge succeeds, push result"
-	echo "  to ref refs/auto-update/<branch>/merging."
+	echo "  to branch projects/auto-update/<branch>/merging."
 	echo ""
 	echo "  This script requires the DRYRUN environment variable to be set to"
 	echo "  either 'true' or 'false', else it will refuse to push anything"
 	echo "  upstream. If DRYRUN is set to true, the upstreams/<branch> branch"
 	echo "  will not be pushed and the resulting merge will be pushed to"
-	echo "  refs/auto-update/<branch>/merging-dryrun instead."
+	echo "  projects/auto-update/<branch>/merging-dryrun instead."
 	echo ""
 	echo "    -h  display this message and exit."
 	echo ""
@@ -54,7 +54,7 @@ logmust check_package_exists "$PACKAGE"
 
 logmust determine_default_git_branch
 
-merging_ref="refs/auto-update/$DEFAULT_GIT_BRANCH/merging"
+merging_ref="refs/heads/projects/auto-update/$DEFAULT_GIT_BRANCH/merging"
 if [[ "$DRYRUN" == 'true' ]]; then
 	merging_ref="${merging_ref}-dryrun"
 elif [[ "$DRYRUN" != 'false' ]]; then
@@ -72,15 +72,27 @@ logmust cd "$WORKDIR"
 stage fetch
 
 stage update_upstream
+force_push="${FORCE_PUSH_ON_UPDATE:-false}"
+
 if [[ -f "$WORKDIR/upstream-updated" ]]; then
 	if $DRYRUN; then
 		echo_success "Upstream updated for package $PACKAGE" \
 			"but not pushed because this is a dry-run."
 	else
 		logmust check_git_credentials_set
-		# TODO: set force if rebase required
+
 		logmust push_to_remote "refs/heads/upstream-HEAD" \
-			"refs/heads/upstreams/$DEFAULT_GIT_BRANCH" false
+			"refs/heads/upstreams/$DEFAULT_GIT_BRANCH" "$force_push"
+
+		if [[ -f "$WORKDIR/upstream-tag" ]]; then
+			echo "Note: also pushing tag from upstream."
+			upstream_tag="$(cat "$WORKDIR/upstream-tag")"
+			[[ -z "$upstream_tag" ]] &&
+				die "tag missing in $WORKDIR/upstream-tag"
+			logmust push_to_remote "$upstream_tag" \
+				"$upstream_tag" false
+		fi
+
 		echo_success "Upstream updated for package $PACKAGE."
 	fi
 fi
