@@ -65,7 +65,7 @@ done
 # Check that overriding TARGET_KERNEL_FLAVORS changes which kernel packages are
 # returned.
 test "$(./query-packages.sh list linux-kernel | wc -l | awk '{print $1}')" -gt 1
-test "$(TARGET_KERNEL_FLAVORS=generic ./query-packages.sh list linux-kernel)" == "linux-generic"
+test "$(TARGET_KERNEL_FLAVORS=generic ./query-packages.sh list linux-kernel)" == "linux-kernel-generic"
 
 # Check that the output from the appliance list contains zfs and
 # delphix-platform packages. Note, we explicitly do not use grep -q here as it

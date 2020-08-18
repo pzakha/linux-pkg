@@ -102,9 +102,9 @@ function query_list() {
 		list_all_packages >/dev/null
 	elif [[ $list == appliance ]]; then
 		# concatenate kernel and userland packages
-		read_package_list "$TOP/package-lists/build/kernel.pkgs" >/dev/null
+		read_package_list "$TOP/package-lists/build/kernel-modules.pkgs" >/dev/null
 		local kernel_list=("${_RET_LIST[@]}")
-		read_package_list "$TOP/package-lists/build/userland.pkgs" >/dev/null
+		read_package_list "$TOP/package-lists/build/main.pkgs" >/dev/null
 		_RET_LIST+=("${kernel_list[@]}")
 		# check that there are no duplicates
 		dups=$(printf '%s\n' "${_RET_LIST[@]}" | sort | uniq -d)
