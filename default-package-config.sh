@@ -98,7 +98,7 @@ function kernel_build() {
 	# We record the kernel version into a file. This field is consumed
 	# by other kernel packages, such as zfs, during their build.
 	#
-	kernel_version="${kernel_release}-${delphix_abinum}"
+	kernel_version="${kernel_release}-${delphix_abinum}-${platform}"
 	echo "$kernel_version" >"$WORKDIR/artifacts/KERNEL_VERSION"
 
 	#
@@ -111,7 +111,7 @@ function kernel_build() {
 	#   we set it to false to avoid any misconfigurations down
 	#   the line.
 	#
-	local debian_rules_args="skipdbg=false uefi_signed=false abinum=${delphix_abinum} ${debian_rules_extra_args}"
+	local debian_rules_args="skipdbg=false uefi_signed=false disable_d_i=true flavours=$platform abinum=${delphix_abinum} ${debian_rules_extra_args}"
 
 	#
 	# Clean up everything generated so far and recreate the
@@ -136,10 +136,16 @@ function kernel_build() {
 	local build_deps_tool="apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes"
 	logmust sudo mk-build-deps --install debian/control --tool "${build_deps_tool}"
 
-	logmust fakeroot debian/rules "binary-${platform}" ${debian_rules_args}
+	logmust fakeroot debian/rules "binary" ${debian_rules_args}
 
 	logmust cd "$WORKDIR"
 	logmust mv ./*deb "artifacts/"
+
+	#
+	# Make sure that we recorded the kernel version properly by checking
+	# one of the .debs produced
+	#
+	logmust test -f "artifacts/linux-image-${kernel_version}_"*.deb
 }
 
 #
