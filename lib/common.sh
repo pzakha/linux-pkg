@@ -35,7 +35,7 @@ export _BASE_S3_URL=${_BASE_S3_URL:-s3://snapshot-de-images/builds/jenkins-ops.p
 
 export UBUNTU_DISTRIBUTION="bionic"
 
-export DEFAULT_LINUX_KERNEL_PACKAGE_SOURCE="prebuilt"
+export DEFAULT_LINUX_KERNEL_PACKAGE_SOURCE="delphix"
 
 # shellcheck disable=SC2086
 function enable_colors() {
