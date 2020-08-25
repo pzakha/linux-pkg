@@ -642,7 +642,7 @@ function fetch_repo_from_git() {
 			logmust mkdir -p "$git_cache_dir"
 			logmust cd "$git_cache_dir"
 			logmust git init --bare
-			if $DO_UPDATE_PACKAGE; then
+			if [[ "$DO_UPDATE_PACKAGE" == "true" ]]; then
 				logmust git fetch --no-tags "$PACKAGE_GIT_URL" \
 					"+$PACKAGE_GIT_BRANCH:repo-HEAD"
 				logmust git fetch --no-tags "$PACKAGE_GIT_URL" \
@@ -668,7 +668,7 @@ function fetch_repo_from_git() {
 	# main branch and the upstream branch with their histories.
 	# Otherwise just get the latest commit of the main branch.
 	#
-	if $DO_UPDATE_PACKAGE; then
+	if [[ "$DO_UPDATE_PACKAGE" == "true" ]]; then
 		logmust git fetch --no-tags "$PACKAGE_GIT_URL" \
 			"+$PACKAGE_GIT_BRANCH:repo-HEAD"
 		logmust git fetch --no-tags "$PACKAGE_GIT_URL" \
