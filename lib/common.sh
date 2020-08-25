@@ -19,9 +19,6 @@ export _RET
 export _RET_LIST
 export DEBIAN_FRONTEND=noninteractive
 
-# TODO: allow updating upstream for other branches than master
-export REPO_UPSTREAM_BRANCH="upstreams/master"
-
 export SUPPORTED_KERNEL_FLAVORS="generic aws gcp azure oracle"
 
 #
@@ -175,25 +172,6 @@ function check_git_ref() {
 			die "git ref '$ref' not found"
 		fi
 	done
-}
-
-function query_git_credentials() {
-	if [[ -n "$PUSH_GIT_USER" ]] && [[ -n "$PUSH_GIT_PASSWORD" ]]; then
-		return 0
-	fi
-
-	if [[ ! -t 1 ]]; then
-		die "PUSH_GIT_USER and PUSH_GIT_PASSWORD environment" \
-			"variables must be set to a user that has" \
-			"push permissions for the target repository."
-	fi
-
-	echo "Please enter git credentials for pushing to repository."
-	read -r -p "User: " PUSH_GIT_USER
-	read -r -s -p "Password: " PUSH_GIT_PASSWORD
-	echo ""
-	export PUSH_GIT_USER
-	export PUSH_GIT_PASSWORD
 }
 
 #
@@ -459,6 +437,9 @@ function get_package_config_from_env() {
 	echo_bold "------------------------------------------------------------"
 }
 
+#
+# apt install packages.
+#
 function install_pkgs() {
 	for attempt in {1..3}; do
 		echo "Running: sudo env DEBIAN_FRONTEND=noninteractive " \
@@ -471,6 +452,9 @@ function install_pkgs() {
 	die "apt-get install failed after $attempt attempts"
 }
 
+#
+# Install build dependencies listed in the debian/control file of the package.
+#
 function install_build_deps_from_control_file() {
 	logmust pushd "$WORKDIR/repo"
 	logmust sudo env DEBIAN_FRONTEND=noninteractive mk-build-deps --install \
@@ -479,6 +463,9 @@ function install_build_deps_from_control_file() {
 	logmust popd
 }
 
+#
+# Returns a list of all known packages in _RET_LIST.
+#
 function list_all_packages() {
 	local pkg
 
@@ -492,6 +479,9 @@ function list_all_packages() {
 	done
 }
 
+#
+# Read a package-list file and return listed packages in _RET_LIST.
+#
 function read_package_list() {
 	local file="$1"
 
@@ -513,28 +503,11 @@ function read_package_list() {
 	done <"$file" || die "Failed to read package list: $file"
 }
 
-function get_package_list_file() {
-	local list_type="$1"
-	local list_name="$2"
-
-	if [[ "$list_type" != build ]] && [[ "$list_type" != update ]]; then
-		die "Invalid list type '$list_type'"
-	fi
-
-	_RET="$TOP/package-lists/${list_type}/${list_name}.pkgs"
-	if [[ ! -f "$_RET" ]]; then
-		echo_error "Invalid $list_type package list '$list_name'"
-		echo_error "See lists in $TOP/package-lists/${list_type}/."
-		echo_error "Choose one of:"
-		cd "$TOP/package-lists/${list_type}/" ||
-			die "failed to cd to $TOP/package-lists/${list_type}/"
-		for list in *.pkgs; do
-			echo_error "    ${list%.pkgs}"
-		done
-		die
-	fi
-}
-
+#
+# List all target kernel packages. By default, it returns all the kernel
+# flavors supported and built by linux-pkg, however this can be overridden
+# via TARGET_KERNEL_FLAVORS, which can be useful.
+#
 function list_linux_kernel_packages() {
 	local kernel
 
@@ -563,12 +536,16 @@ function install_shfmt() {
 	echo "shfmt version $(shfmt -version) is installed."
 }
 
+#
+# Install kernel headers packages for all target kernels.
+# The kernel packages are fetched from S3.
+#
 function install_kernel_headers() {
 	logmust determine_target_kernels
 	check_env KERNEL_VERSIONS DEPDIR
 
 	logmust list_linux_kernel_packages
-	# Note: linux pacakges returned in _RET_LIST
+	# Note: linux packages returned in _RET_LIST
 	local pkg
 	for pkg in "${_RET_LIST[@]}"; do
 		logmust install_pkgs "$DEPDIR/$pkg/"*-headers-*.deb
@@ -602,6 +579,10 @@ function default_revision() {
 	echo "delphix-$(date '+%Y.%m.%d.%H')"
 }
 
+#
+# Fetch artifacts from S3 for all packages listed in PACKAGE_DEPENDENCIES which
+# is defined in the package's config.
+#
 function fetch_dependencies() {
 	export DEPDIR="$WORKDIR/dependencies"
 	logmust mkdir "$DEPDIR"
@@ -647,7 +628,7 @@ function fetch_dependencies() {
 # Fetch package repository into $WORKDIR/repo
 #
 function fetch_repo_from_git() {
-	check_env PACKAGE_GIT_URL PACKAGE_GIT_BRANCH
+	check_env PACKAGE_GIT_URL PACKAGE_GIT_BRANCH DEFAULT_GIT_BRANCH
 
 	#
 	# For local testing only, to avoid fetching the same repository
@@ -665,7 +646,7 @@ function fetch_repo_from_git() {
 				logmust git fetch --no-tags "$PACKAGE_GIT_URL" \
 					"+$PACKAGE_GIT_BRANCH:repo-HEAD"
 				logmust git fetch --no-tags "$PACKAGE_GIT_URL" \
-					"+$REPO_UPSTREAM_BRANCH:upstream-HEAD"
+					"+upstreams/$DEFAULT_GIT_BRANCH:upstream-HEAD"
 			else
 				logmust git fetch --no-tags "$PACKAGE_GIT_URL" \
 					"+$PACKAGE_GIT_BRANCH:repo-HEAD" --depth=1
@@ -688,11 +669,10 @@ function fetch_repo_from_git() {
 	# Otherwise just get the latest commit of the main branch.
 	#
 	if $DO_UPDATE_PACKAGE; then
-		check_env REPO_UPSTREAM_BRANCH
 		logmust git fetch --no-tags "$PACKAGE_GIT_URL" \
 			"+$PACKAGE_GIT_BRANCH:repo-HEAD"
 		logmust git fetch --no-tags "$PACKAGE_GIT_URL" \
-			"+$REPO_UPSTREAM_BRANCH:upstream-HEAD"
+			"+upstreams/$DEFAULT_GIT_BRANCH:upstream-HEAD"
 	else
 		logmust git fetch --no-tags "$PACKAGE_GIT_URL" \
 			"+$PACKAGE_GIT_BRANCH:repo-HEAD" --depth=1
@@ -794,6 +774,11 @@ function update_upstream_from_git() {
 	logmust cd "$WORKDIR"
 }
 
+#
+# Returns true if upstreams/<branch> needs to be merged into <branch> for the
+# active package, where <branch> is the branch being updated, i.e.
+# DEFAULT_GIT_BRANCH.
+#
 function is_merge_needed() {
 	local repo_ref="refs/heads/repo-HEAD"
 	local upstream_ref="refs/heads/upstream-HEAD"
@@ -810,6 +795,18 @@ function is_merge_needed() {
 	logmust popd
 }
 
+#
+# Default function for merging upstreams/<branch> into <branch>, where <branch>
+# is the branch being updated, i.e. DEFAULT_GIT_BRANCH.
+#
+# If merge was needed, file $WORKDIR/repo-updated is created and previous tip
+# of <branch> is saved in repo-HEAD-saved. The repo-updated file lets the
+# caller (typically Jenkins) know if a merge was necessary. The repo-HEAD-saved
+# ref should be compared to the remote branch when it is time to push the
+# merge; if they differ it means that the remote branch was modified and
+# so the merge should be aborted -- this can happen if a PR was merged by a
+# developer while auto-update was running.
+#
 function merge_with_upstream_default() {
 	local repo_ref="refs/heads/repo-HEAD"
 	local upstream_ref="refs/heads/upstream-HEAD"
@@ -830,29 +827,33 @@ function merge_with_upstream_default() {
 	#
 	logmust git branch repo-HEAD-saved
 
-	echo "Running: git merge --no-edit --no-stat $upstream_ref"
-	if git merge --no-edit --no-stat "$upstream_ref"; then
-		echo "git merge succeeded"
-		logmust touch "$WORKDIR/repo-updated"
-	else
-		echo "git merge failed"
-		logmust git merge --abort
-		return 1
-	fi
+	logmust git merge --no-edit --no-stat "$upstream_ref"
+	logmust touch "$WORKDIR/repo-updated"
 }
 
+#
+# Check if git credentials are set for pushing update. If running in
+# interactive mode, it will prompt the user for credentials if they are not
+# provided in env.
+#
 function check_git_credentials_set() {
 	if [[ -z "$PUSH_GIT_USER" ]] || [[ -z "$PUSH_GIT_PASSWORD" ]]; then
 		if [[ -t 1 ]]; then
 			echo "Please enter git credentials to push to remote."
 			read -r -p "Username: " PUSH_GIT_USER
 			read -r -s -p "Password: " PUSH_GIT_PASSWORD
+			export PUSH_GIT_USER
+			export PUSH_GIT_PASSWORD
 		else
 			die "PUSH_GIT_USER and PUSH_GIT_PASSWORD must be set."
 		fi
 	fi
 }
 
+#
+# Push a local ref to a remote ref of the default remote repository for the
+# package.
+#
 function push_to_remote() {
 	local local_ref="$1"
 	local remote_ref="$2"
@@ -894,6 +895,10 @@ function set_changelog() {
 	fi
 }
 
+#
+# Default dpkg_buildpackage function for building packages. Before running the
+# build, it updates the version of the package in the changelog.
+#
 function dpkg_buildpackage_default() {
 	logmust cd "$WORKDIR/repo"
 	logmust set_changelog
@@ -1064,6 +1069,11 @@ function install_gcc8() {
 		/usr/bin/gcc-8 800 --slave /usr/bin/g++ g++ /usr/bin/g++-8
 }
 
+#
+# Store git-related build info for the package after the build is done.
+# Note that some of this metadata is used by the Jenkins build so be careful
+# when modifying it.
+#
 function store_git_info() {
 	logmust pushd "$WORKDIR/repo"
 	local git_hash
@@ -1078,6 +1088,11 @@ function store_git_info() {
 	logmust popd
 }
 
+#
+# Store build info metadata for the package after the build is done.
+# Note that some of this metadata is used by the Jenkins build so be careful
+# when modifying it.
+#
 function store_build_info() {
 	if [[ -d "$WORKDIR/repo/.git" ]]; then
 		logmust store_git_info
