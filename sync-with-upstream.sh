@@ -67,6 +67,10 @@ logmust sudo rm -rf "$WORKDIR"
 logmust mkdir "$WORKDIR"
 logmust ln -sf "$WORKDIR" "$TOP/workdir"
 
+#
+# Set DO_UPDATE_PACKAGE to true so that the fetch stage fetches both the
+# target branch as well as the upstream branch.
+#
 export DO_UPDATE_PACKAGE=true
 logmust cd "$WORKDIR"
 stage fetch
