@@ -638,7 +638,9 @@ function fetch_dependencies() {
 			s3url="s3://$bucket/$(cat latest)"
 			logmust rm latest
 		fi
+		[[ "$s3url" != */ ]] && s3url="$s3url/"
 		logmust mkdir "$dep"
+		logmust aws s3 ls "$s3url"
 		logmust aws s3 cp --only-show-errors --recursive "$s3url" "$dep/"
 		echo_bold "Fetched artifacts for '$dep' from $s3url"
 		PACKAGE_DEPENDENCIES_METADATA="${PACKAGE_DEPENDENCIES_METADATA}$dep: $s3url\\n"
