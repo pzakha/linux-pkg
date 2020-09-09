@@ -19,7 +19,7 @@ export _RET
 export _RET_LIST
 export DEBIAN_FRONTEND=noninteractive
 
-export SUPPORTED_KERNEL_FLAVORS="generic aws gcp azure oracle"
+export SUPPORTED_KERNEL_FLAVORS="generic aws"
 
 #
 # Used when fetching artifacts for external dependencies. Can be overridden
