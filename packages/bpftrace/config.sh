@@ -16,7 +16,7 @@
 #
 # shellcheck disable=SC2034
 
-DEFAULT_PACKAGE_GIT_URL="https://github.com/delphix/bpftrace.git"
+DEFAULT_PACKAGE_GIT_URL="https://github.com/pzakha/bpftrace.git"
 DEFAULT_PACKAGE_VERSION=1.0.0
 PACKAGE_DEPENDENCIES="bcc"
 
