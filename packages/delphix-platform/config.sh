@@ -16,7 +16,7 @@
 #
 # shellcheck disable=SC2034
 
-DEFAULT_PACKAGE_GIT_URL="https://github.com/delphix/delphix-platform.git"
+DEFAULT_PACKAGE_GIT_URL="https://github.com/pzakha/delphix-platform.git"
 DEFAULT_PACKAGE_VERSION="1.0.0"
 
 function build() {
