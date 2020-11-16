@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2018, 2020 Delphix
+# Copyright 2020 Delphix
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,14 +16,13 @@
 #
 # shellcheck disable=SC2034
 
-DEFAULT_PACKAGE_GIT_URL="https://github.com/pzakha/delphix-platform.git"
-DEFAULT_PACKAGE_VERSION="1.0.0"
+DEFAULT_PACKAGE_GIT_URL="none"
+
+function fetch() {
+	# Nothing to do
+	return
+}
 
 function build() {
-	logmust cd "$WORKDIR/repo"
-	logmust ansible-playbook bootstrap/playbook.yml
-	logmust ./scripts/docker-run.sh make packages \
-		VERSION="$PACKAGE_VERSION-$PACKAGE_REVISION"
-	logmust sudo chown -R "$USER:" artifacts
-	logmust mv artifacts/*deb "$WORKDIR/artifacts/"
+	logmust fetch_kernel_from_apt_for_platform aws
 }
