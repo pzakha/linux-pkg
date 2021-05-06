@@ -72,8 +72,8 @@ configure_apt_sources() {
 		deb ${primary_url} ${UBUNTU_DISTRIBUTION}-backports main restricted universe multiverse
 		deb-src ${primary_url} ${UBUNTU_DISTRIBUTION}-backports main restricted universe multiverse
 
-		deb ${secondary_url} ${UBUNTU_DISTRIBUTION} main multiverse universe
-		deb ${secondary_url} ${UBUNTU_DISTRIBUTION}-updates main multiverse universe
+		deb ${secondary_url} bionic main multiverse universe
+		deb ${secondary_url} bionic-updates main multiverse universe
 		EOF" || die "/etc/apt/sources.list could not be updated"
 
 	logmust sudo apt-key add "$TOP/resources/delphix-secondary-mirror.key"
