@@ -27,7 +27,7 @@ export SUPPORTED_KERNEL_FLAVORS="generic aws gcp azure oracle"
 #
 export JENKINS_OPS_DIR="${JENKINS_OPS_DIR:-jenkins-ops}"
 
-export UBUNTU_DISTRIBUTION="bionic"
+export UBUNTU_DISTRIBUTION="focal"
 
 #
 # We currently support getting the linux kernel from 3 different sources:

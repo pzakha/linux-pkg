@@ -109,7 +109,7 @@ logmust install_shfmt
 # install gcc 8
 # https://bugs.launchpad.net/ubuntu/+source/linux/+bug/1849348
 #
-logmust install_gcc8
+#logmust install_gcc8
 
 logmust git config --global user.email "eng@delphix.com"
 logmust git config --global user.name "Delphix Engineering"
