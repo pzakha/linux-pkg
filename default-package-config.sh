@@ -283,6 +283,24 @@ function kernel_update_upstream() {
 	#
 	local upstream_tag_info
 	upstream_tag_info=$(git ls-remote --tags --ref upstream | grep "${tag_prefix}" | tail -n 1)
+
+	if [[ -z "${upstream_tag_info}" ]]; then
+		echo "tag with prefix ${tag_prefix} not found."
+		tag_prefix="${tag_prefix_flavour}-${kernel_version}-${abinum}"
+		#
+		# It seems like Canonical has 2 ways of naming their tags:
+		#  - Ubuntu-oracle-5.4.0-1044.47
+		#  - Ubuntu-oracle-5.4-5.4.0-1044.47_18.04.1
+		#
+		# It appears however that for a given kernel version and
+		# a given distribution, only one naming scheme is being used,
+		# i.e. we shouldn't find both of the tags listed above in the
+		# same repository.
+		#
+		echo "trying tag prefix: ${tag_prefix}."
+		upstream_tag_info=$(git ls-remote --tags --ref upstream | grep "${tag_prefix}" | tail -n 1)
+	fi
+
 	[[ -z "${upstream_tag_info}" ]] && die "could not find upstream tag for tag prefix: ${tag_prefix}"
 
 	local upstream_tag
