@@ -243,7 +243,8 @@ function kernel_update_upstream() {
 	elif [[ "${platform}" == aws ]] ||
 		[[ "${platform}" == azure ]] ||
 		[[ "${platform}" == gcp ]] ||
-		[[ "${platform}" == oracle ]]; then
+		[[ "${platform}" == oracle ]] ||
+		[[ "${platform}" == generic ]]; then
 		tag_prefix_flavour="Ubuntu-${platform}"
 	else
 		die "assertion: unexpected platform: ${platform}"
