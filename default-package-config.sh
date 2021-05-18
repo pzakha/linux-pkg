@@ -234,21 +234,24 @@ function kernel_update_upstream() {
 	# version and the ABI num that we got above.
 	#
 	# Note that "generic" (used mainly ESX) is a special
-	# case as we are currently using the HWE kernel image.
+	# case on bionic where we are using the HWE kernel image.
 	#
 	local tag_prefix_flavour
-	if [[ "${platform}" == generic ]] &&
-		[[ "$UBUNTU_DISTRIBUTION" == bionic ]]; then
-		tag_prefix_flavour="Ubuntu-hwe"
-	elif [[ "${platform}" == aws ]] ||
-		[[ "${platform}" == azure ]] ||
-		[[ "${platform}" == gcp ]] ||
-		[[ "${platform}" == oracle ]] ||
-		[[ "${platform}" == generic ]]; then
+	case "${platform}" in
+	generic)
+		if [[ "$UBUNTU_DISTRIBUTION" == bionic ]]; then
+			tag_prefix_flavour="Ubuntu-hwe"
+		else
+			tag_prefix_flavour="Ubuntu"
+		fi
+		;;
+	aws | azure | gcp | oracle)
 		tag_prefix_flavour="Ubuntu-${platform}"
-	else
+		;;
+	*)
 		die "assertion: unexpected platform: ${platform}"
-	fi
+		;;
+	esac
 
 	local tag_prefix kvers_major kvers_minor short_kvers
 	kvers_major=$(echo "${kernel_version}" | cut -d '.' -f 1)
