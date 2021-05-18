@@ -369,17 +369,12 @@ function kernel_merge_with_upstream() {
 
 	check_git_ref "$upstream_ref" "$repo_ref"
 
-	if git merge-base --is-ancestor "$upstream_ref" "$repo_ref"; then
-		echo "NOTE: $PACKAGE is already up-to-date with upstream."
-		return 0
-	fi
-
 	#
 	# Ensure that there is a commit marking the start of
 	# the Delphix set of patches. Then get the hash of
 	# the commit right before it.
 	#
-	local dlpx_patch_end dlpx_patch_start current_ubuntu_commit
+	local dlpx_patch_end dlpx_patch_start current_ubuntu_commit upstream_head_commit
 	dlpx_patch_start=$(git log --pretty=oneline repo-HEAD | grep @@DELPHIX_PATCHSET_START@@ | awk '{ print $1 }')
 	[[ -z "${dlpx_patch_start}" ]] && die "could not find DELPHIX_PATCHSET_START"
 	[[ $(wc -l <<<"${dlpx_patch_start}") != 1 ]] && die "multiple DELPHIX_PATCHSET_START commits - ${dlpx_patch_start}"
@@ -387,6 +382,13 @@ function kernel_merge_with_upstream() {
 	[[ -z "${current_ubuntu_commit}" ]] && die "could not find commit before DELPHIX_PATCHSET_START"
 	dlpx_patch_end=$(git rev-parse repo-HEAD)
 	[[ -z "${dlpx_patch_end}" ]] && die "could not find repo-HEAD's head commit"
+
+	upstream_head_commit="$(git rev-parse "$upstream_ref")"
+
+	if [[ "$current_ubuntu_commit" == "$upstream_head_commit" ]]; then
+		echo "NOTE: $PACKAGE is already up-to-date with upstream."
+		return 0
+	fi
 
 	#
 	# We rebase all the Delphix commits on top of the new upstream-HEAD
