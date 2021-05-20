@@ -27,7 +27,6 @@ function prepare() {
 		libcurl4-openssl-dev \
 		libjbig0 \
 		libnss3-dev \
-		libnss3-dbg \
 		libnss3-tools \
 		libpam0g-dev \
 		libpixman-1-0 \
@@ -35,8 +34,8 @@ function prepare() {
 		libtiff5 \
 		libxcb-render0 \
 		libxcb-shm0 \
-		python-jira \
-		python-requests \
+		python3-jira \
+		python3-requests \
 		rsync \
 		virtualenv
 
