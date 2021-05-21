@@ -34,6 +34,9 @@ function prepare() {
 		libtiff5 \
 		libxcb-render0 \
 		libxcb-shm0 \
+		mingw-w64 \
+		mono-devel \
+		nsis \
 		python3-jira \
 		python3-requests \
 		rsync \
