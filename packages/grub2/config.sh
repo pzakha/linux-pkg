@@ -28,8 +28,6 @@ SKIP_COPYRIGHTS_CHECK=true
 # Install build dependencies for the package.
 #
 function prepare() {
-	# Install libzfs which is required to build grub
-	logmust install_pkgs "$DEPDIR"/zfs/{libnvpair1linux,libuutil1linux,libzfs2linux,libzpool2linux,libzfslinux-dev}_*.deb
 	logmust install_build_deps_from_control_file
 }
 
