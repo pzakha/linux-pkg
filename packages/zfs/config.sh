@@ -16,7 +16,7 @@
 #
 # shellcheck disable=SC2034
 
-DEFAULT_PACKAGE_GIT_URL="https://github.com/delphix/zfs.git"
+DEFAULT_PACKAGE_GIT_URL="https://github.com/pzakha/zfs.git"
 PACKAGE_DEPENDENCIES="@linux-kernel"
 
 UPSTREAM_GIT_URL="https://github.com/zfsonlinux/zfs.git"
